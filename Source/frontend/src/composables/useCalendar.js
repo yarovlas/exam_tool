@@ -42,6 +42,7 @@ export function useCalendar() {
 
   return {
     calendarDays,
+    currentDate,
     monthYear,
     nextMonth,
     previousMonth,

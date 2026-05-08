@@ -1,8 +1,40 @@
 <script setup>
+import { ref } from 'vue'
+import ExamMakingContextWindow from '../components/ExamMakingContextWindow.vue'
 import { eventTypes } from '../constants/dashboard'
 import { useCalendar } from '../composables/useCalendar'
 
-const { calendarDays, monthYear, nextMonth, previousMonth } = useCalendar()
+const { calendarDays, currentDate, monthYear, nextMonth, previousMonth } = useCalendar()
+
+const isExamContextOpen = ref(false)
+const examContextMode = ref('manual')
+const examFormDate = ref('')
+
+const padDatePart = (value) => String(value).padStart(2, '0')
+
+const toIsoDate = (year, monthIndex, day) => {
+  return `${year}-${padDatePart(monthIndex + 1)}-${padDatePart(day)}`
+}
+
+const openExamContextFromCalendar = (day) => {
+  if (!day) {
+    return
+  }
+
+  examContextMode.value = 'calendar'
+  examFormDate.value = toIsoDate(currentDate.value.getFullYear(), currentDate.value.getMonth(), day)
+  isExamContextOpen.value = true
+}
+
+const openExamContextManual = () => {
+  examContextMode.value = 'manual'
+  examFormDate.value = ''
+  isExamContextOpen.value = true
+}
+
+const closeExamContext = () => {
+  isExamContextOpen.value = false
+}
 </script>
 
 <template>
@@ -11,7 +43,7 @@ const { calendarDays, monthYear, nextMonth, previousMonth } = useCalendar()
       <section class="calendar-section">
         <div class="calendar-header">
           <h1>Dashboard</h1>
-          <button class="btn-new-exam">+ Nieuw Examen</button>
+          <button class="btn-new-exam" @click="openExamContextManual">+ Nieuw Examen</button>
         </div>
 
         <div class="calendar-card">
@@ -26,7 +58,13 @@ const { calendarDays, monthYear, nextMonth, previousMonth } = useCalendar()
           </div>
 
           <div class="calendar-grid">
-            <div v-for="(day, index) in calendarDays" :key="index" class="calendar-day" :class="{ empty: !day }">
+            <div
+              v-for="(day, index) in calendarDays"
+              :key="index"
+              class="calendar-day"
+              :class="{ empty: !day }"
+              @click="openExamContextFromCalendar(day)"
+            >
               <span v-if="day">{{ day }}</span>
             </div>
           </div>
@@ -65,4 +103,12 @@ const { calendarDays, monthYear, nextMonth, previousMonth } = useCalendar()
       </aside>
     </div>
   </main>
+
+  <ExamMakingContextWindow
+    :is-open="isExamContextOpen"
+    :mode="examContextMode"
+    :date="examFormDate"
+    @close="closeExamContext"
+    @update:date="examFormDate = $event"
+  />
 </template>

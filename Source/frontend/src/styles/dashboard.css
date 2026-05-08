@@ -267,6 +267,112 @@
   color: #666;
 }
 
+.context-window-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 24, 39, 0.45);
+  display: flex;
+  justify-content: flex-end;
+  z-index: 200;
+}
+
+.context-window {
+  width: min(100%, 440px);
+  height: 100%;
+  background: white;
+  padding: 1.5rem;
+  box-shadow: -8px 0 28px rgba(15, 23, 42, 0.18);
+  overflow-y: auto;
+}
+
+.context-window-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.context-window-header h2 {
+  font-size: 1.35rem;
+  color: #1a1a1a;
+}
+
+.context-window-close {
+  border: none;
+  background: #f3f4f6;
+  color: #1f2937;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.context-window-hint {
+  color: #6b7280;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.context-window-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.context-window-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.context-window-form span {
+  font-size: 0.875rem;
+  color: #374151;
+  font-weight: 600;
+}
+
+.context-window-form input,
+.context-window-form textarea {
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  padding: 0.65rem 0.75rem;
+  font-size: 0.95rem;
+  font-family: inherit;
+}
+
+.context-window-form textarea {
+  resize: vertical;
+}
+
+.context-window-actions {
+  margin-top: 0.25rem;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.btn-secondary,
+.btn-primary {
+  border: none;
+  border-radius: 0.5rem;
+  padding: 0.6rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-secondary {
+  background: #e5e7eb;
+  color: #1f2937;
+}
+
+.btn-primary {
+  background: #7c3aed;
+  color: white;
+}
+
 @media (max-width: 1024px) {
   .dashboard-grid {
     grid-template-columns: 1fr;
