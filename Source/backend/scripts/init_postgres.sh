@@ -3,6 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+COMPOSE_FILE="${PROJECT_ROOT}/docker-compose.yml"
 
 if [[ -f "${PROJECT_ROOT}/.env" ]]; then
   # shellcheck disable=SC1091
@@ -36,10 +37,15 @@ ensure_docker_compose_available() {
     echo "Error: docker compose is not available."
     exit 1
   fi
+
+  if [[ ! -f "${COMPOSE_FILE}" ]]; then
+    echo "Error: docker compose file not found at ${COMPOSE_FILE}."
+    exit 1
+  fi
 }
 
 is_docker_postgres_running() {
-  docker compose ps --status running --services 2>/dev/null | grep -qx 'postgres'
+  docker compose --file "${COMPOSE_FILE}" --project-directory "${PROJECT_ROOT}" ps --status running --services 2>/dev/null | grep -qx 'postgres'
 }
 
 ensure_docker_postgres_running() {
@@ -51,7 +57,7 @@ ensure_docker_postgres_running() {
 
   if [[ "${DOCKER_AUTO_START}" == "true" ]]; then
     echo "Postgres service is not running. Starting docker compose service 'postgres'..."
-    docker compose up -d postgres
+    docker compose --file "${COMPOSE_FILE}" --project-directory "${PROJECT_ROOT}" up -d postgres
     return
   fi
 
@@ -122,7 +128,7 @@ run_psql() {
     return
   fi
 
-  docker compose exec -T postgres psql \
+  docker compose --file "${COMPOSE_FILE}" --project-directory "${PROJECT_ROOT}" exec -T postgres psql \
     --username "${PGUSER}" \
     --dbname "${db_name}" \
     --set ON_ERROR_STOP=1 \
@@ -137,7 +143,7 @@ apply_migration() {
     return
   fi
 
-  docker compose exec -T postgres psql \
+  docker compose --file "${COMPOSE_FILE}" --project-directory "${PROJECT_ROOT}" exec -T postgres psql \
     --username "${PGUSER}" \
     --dbname "${PGDATABASE}" \
     --set ON_ERROR_STOP=1 < "${migration_file}"

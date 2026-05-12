@@ -1,22 +1,5 @@
 # Backend (FastAPI + PostgreSQL)
 
-Deze backend dekt stories #150-#153:
-
-- #150: FastAPI backend start op PostgreSQL
-- #151: backend-structuur met databaseconfiguratie
-- #152: healthcheck endpoint + startup validatie
-- #153: eerste API voor `exam_planning` (create + list)
-
-## Structuur
-
-- `app/main.py` - FastAPI app + startup DB check
-- `app/core/config.py` - env-configuratie
-- `app/db/session.py` - SQLAlchemy engine/session
-- `app/api/routes/health.py` - `GET /health`
-- `app/api/routes/exam_planning.py` -
-  - `POST /api/exam-planning`
-  - `GET /api/exam-planning`
-
 ## Installatie
 
 ```bash
@@ -78,4 +61,10 @@ List exam planning:
 
 ```bash
 curl "http://127.0.0.1:8000/api/exam-planning?limit=50&offset=0"
+```
+
+Example exam for a quick database smoke test:
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/exam-planning/example
 ```
