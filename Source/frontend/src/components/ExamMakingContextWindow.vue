@@ -43,11 +43,6 @@ const updateDate = (event) => {
 
       <form class="context-window-form" @submit.prevent>
         <label>
-          <span>Examennaam</span>
-          <input type="text" placeholder="Bijv. Nederlands praktijkexamen" />
-        </label>
-
-        <label>
           <span>Datum</span>
           <input type="date" :value="date" @input="updateDate" />
         </label>
@@ -63,8 +58,8 @@ const updateDate = (event) => {
         </label>
 
         <label>
-          <span>Notities</span>
-          <textarea rows="4" placeholder="Template: extra informatie voor dit examen"></textarea>
+          <span>Examtype</span>
+          <input type="text" placeholder="Bijv. Praktijkexamen" />
         </label>
 
         <div class="context-window-actions">
