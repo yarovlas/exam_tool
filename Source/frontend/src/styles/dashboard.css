@@ -216,6 +216,46 @@
   color: #999;
 }
 
+.card-error {
+  font-size: 0.875rem;
+  color: #b91c1c;
+}
+
+.exam-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.exam-item {
+  border: 1px solid #ececf2;
+  border-radius: 0.5rem;
+  padding: 0.65rem;
+}
+
+.exam-item-date {
+  font-size: 0.8rem;
+  color: #6b7280;
+  margin-bottom: 0.25rem;
+}
+
+.exam-item-title {
+  font-size: 0.9rem;
+  color: #111827;
+  margin-bottom: 0.2rem;
+  text-transform: capitalize;
+}
+
+.exam-item-status {
+  display: inline-block;
+  font-size: 0.75rem;
+  color: #6d28d9;
+  background: #efe9ff;
+  border-radius: 999px;
+  padding: 0.15rem 0.5rem;
+  text-transform: capitalize;
+}
+
 .stats {
   display: flex;
   flex-direction: column;
@@ -334,12 +374,18 @@
 }
 
 .context-window-form input,
-.context-window-form textarea {
+.context-window-form textarea,
+.context-window-form select {
   border: 1px solid #d1d5db;
   border-radius: 0.5rem;
   padding: 0.65rem 0.75rem;
   font-size: 0.95rem;
   font-family: inherit;
+}
+
+.context-window-error {
+  font-size: 0.85rem;
+  color: #b91c1c;
 }
 
 .context-window-form textarea {
@@ -371,6 +417,11 @@
 .btn-primary {
   background: #7c3aed;
   color: white;
+}
+
+.btn-primary:disabled {
+  opacity: 0.75;
+  cursor: wait;
 }
 
 @media (max-width: 1024px) {

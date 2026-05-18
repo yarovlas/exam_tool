@@ -1,14 +1,20 @@
 <script setup>
-import { ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import ExamMakingContextWindow from '../components/ExamMakingContextWindow.vue'
 import { eventTypes } from '../constants/dashboard'
 import { useCalendar } from '../composables/useCalendar'
+import { createExamPlanning, listExamPlanning } from '../services/examPlanningApi'
 
 const { calendarDays, currentDate, monthYear, nextMonth, previousMonth } = useCalendar()
 
 const isExamContextOpen = ref(false)
 const examContextMode = ref('manual')
 const examFormDate = ref('')
+const examPlanningItems = ref([])
+const examPlanningLoading = ref(false)
+const examPlanningError = ref('')
+const saveExamLoading = ref(false)
+const saveExamError = ref('')
 
 const padDatePart = (value) => String(value).padStart(2, '0')
 
@@ -21,20 +27,79 @@ const openExamContextFromCalendar = (day) => {
     return
   }
 
+  saveExamError.value = ''
   examContextMode.value = 'calendar'
   examFormDate.value = toIsoDate(currentDate.value.getFullYear(), currentDate.value.getMonth(), day)
   isExamContextOpen.value = true
 }
 
 const openExamContextManual = () => {
+  saveExamError.value = ''
   examContextMode.value = 'manual'
   examFormDate.value = ''
   isExamContextOpen.value = true
 }
 
 const closeExamContext = () => {
+  saveExamError.value = ''
   isExamContextOpen.value = false
 }
+
+const examDateFormatter = new Intl.DateTimeFormat('nl-NL', {
+  day: '2-digit',
+  month: 'short',
+  year: 'numeric',
+})
+
+const examTimeFormatter = new Intl.DateTimeFormat('nl-NL', {
+  hour: '2-digit',
+  minute: '2-digit',
+})
+
+const formatExamDate = (value) => {
+  const date = new Date(`${value}T00:00:00`)
+  return examDateFormatter.format(date)
+}
+
+const formatExamTime = (value) => {
+  const date = new Date(`1970-01-01T${value}`)
+  return examTimeFormatter.format(date)
+}
+
+const loadExamPlanning = async () => {
+  examPlanningLoading.value = true
+  examPlanningError.value = ''
+
+  try {
+    examPlanningItems.value = await listExamPlanning()
+  } catch (error) {
+    examPlanningError.value = error instanceof Error ? error.message : 'Kon examens niet ophalen'
+  } finally {
+    examPlanningLoading.value = false
+  }
+}
+
+const submitExamPlanning = async (payload) => {
+  saveExamLoading.value = true
+  saveExamError.value = ''
+
+  try {
+    await createExamPlanning(payload)
+    closeExamContext()
+    await loadExamPlanning()
+  } catch (error) {
+    saveExamError.value = error instanceof Error ? error.message : 'Opslaan is mislukt'
+  } finally {
+    saveExamLoading.value = false
+  }
+}
+
+const totalExamens = computed(() => examPlanningItems.value.length)
+const upcomingExamens = computed(() => examPlanningItems.value.slice(0, 5))
+
+onMounted(() => {
+  loadExamPlanning()
+})
 </script>
 
 <template>
@@ -74,7 +139,16 @@ const closeExamContext = () => {
       <aside class="sidebar">
         <div class="sidebar-card">
           <h3 class="card-title">Komende Examens</h3>
-          <p class="card-subtitle">API-koppeling komt hier</p>
+          <p v-if="examPlanningLoading" class="card-subtitle">Laden...</p>
+          <p v-else-if="examPlanningError" class="card-error">{{ examPlanningError }}</p>
+          <p v-else-if="upcomingExamens.length === 0" class="card-subtitle">Nog geen examens gepland</p>
+          <div v-else class="exam-list">
+            <article v-for="exam in upcomingExamens" :key="exam.id" class="exam-item">
+              <p class="exam-item-date">{{ formatExamDate(exam.exam_date) }} · {{ formatExamTime(exam.exam_time) }}</p>
+              <p class="exam-item-title">{{ exam.exam_type }} · {{ exam.room }}</p>
+              <p class="exam-item-status">{{ exam.status }}</p>
+            </article>
+          </div>
         </div>
 
         <div class="sidebar-card">
@@ -86,7 +160,7 @@ const closeExamContext = () => {
             </div>
             <div class="stat-row">
               <span>Total examens:</span>
-              <span>--</span>
+              <span>{{ totalExamens }}</span>
             </div>
           </div>
         </div>
@@ -108,7 +182,10 @@ const closeExamContext = () => {
     :is-open="isExamContextOpen"
     :mode="examContextMode"
     :date="examFormDate"
+    :is-saving="saveExamLoading"
+    :submit-error="saveExamError"
     @close="closeExamContext"
     @update:date="examFormDate = $event"
+    @submit="submitExamPlanning"
   />
 </template>
