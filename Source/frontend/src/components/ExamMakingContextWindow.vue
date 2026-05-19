@@ -1,5 +1,5 @@
 <script setup>
-import { computed, reactive, watch } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 
 const props = defineProps({
   isOpen: {
@@ -34,6 +34,8 @@ const form = reactive({
   status: 'planned',
 })
 
+const localError = ref('')
+
 const modeText = computed(() => {
   if (props.mode === 'calendar') {
     return 'Datum is automatisch ingevuld op basis van je kalenderselectie.'
@@ -48,6 +50,7 @@ const resetForm = (selectedDate = '') => {
   form.room = ''
   form.examType = 'practical'
   form.status = 'planned'
+  localError.value = ''
 }
 
 watch(
@@ -55,6 +58,7 @@ watch(
   (isOpen) => {
     if (isOpen) {
       resetForm(props.date)
+      validateSelectedDateTime()
     }
   },
 )
@@ -63,8 +67,43 @@ watch(
   () => props.date,
   (newDate) => {
     form.examDate = newDate
+    if (props.isOpen) validateSelectedDateTime()
   },
 )
+
+// validate when date or time change while dialog is open
+watch(
+  () => [form.examDate, form.examTime],
+  () => {
+    if (props.isOpen) validateSelectedDateTime()
+  },
+)
+
+const validateSelectedDateTime = () => {
+  localError.value = ''
+
+  if (!form.examDate) {
+    localError.value = 'Kies een geldige datum'
+    return false
+  }
+
+  const selectedIso = `${form.examDate}T${toExamTime(form.examTime)}`
+  const selected = new Date(selectedIso)
+  const now = new Date()
+
+  if (Number.isNaN(selected.getTime())) {
+    localError.value = 'Ongeldige datum/tijd'
+    return false
+  }
+
+  if (selected < now) {
+    localError.value = 'Je kunt geen examen in het verleden plannen'
+    return false
+  }
+
+  localError.value = ''
+  return true
+}
 
 const updateDate = (event) => {
   form.examDate = event.target.value
@@ -80,6 +119,28 @@ const toExamTime = (value) => {
 }
 
 const submitForm = () => {
+  localError.value = ''
+
+  if (!form.examDate) {
+    localError.value = 'Kies een geldige datum'
+    return
+  }
+
+  // parse selected datetime and compare to now
+  const selectedIso = `${form.examDate}T${toExamTime(form.examTime)}`
+  const selected = new Date(selectedIso)
+  const now = new Date()
+
+  if (Number.isNaN(selected.getTime())) {
+    localError.value = 'Ongeldige datum/tijd'
+    return
+  }
+
+  if (selected < now) {
+    localError.value = 'Je kunt geen examen in het verleden plannen'
+    return
+  }
+
   emit('submit', {
     exam_date: form.examDate,
     exam_type: form.examType,
@@ -126,7 +187,8 @@ const submitForm = () => {
           </select>
         </label>
 
-        <p v-if="submitError" class="context-window-error">{{ submitError }}</p>
+        <p v-if="localError" class="context-window-error">{{ localError }}</p>
+        <p v-else-if="submitError" class="context-window-error">{{ submitError }}</p>
 
         <div class="context-window-actions">
           <button class="btn-secondary" type="button" @click="emit('close')">Annuleren</button>
