@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
+import { RouterLink } from 'vue-router'
 import ExamMakingContextWindow from '../components/ExamMakingContextWindow.vue'
 import { eventTypes } from '../constants/dashboard'
 import { useCalendar } from '../composables/useCalendar'
@@ -102,20 +103,6 @@ const getExamPlanningForDay = (day) => {
   return examPlanningByDate.value.get(dayKey) ?? []
 }
 
-const getCalendarDayStyle = (day) => {
-  const exams = getExamPlanningForDay(day)
-  if (exams.length !== 1) return undefined
-
-  const color = eventTypesByValue[exams[0].exam_type]?.color
-  if (!color) return undefined
-
-  return {
-    backgroundColor: color,
-    borderColor: color,
-    color: '#111827',
-  }
-}
-
 const getExamTooltip = (exam) => {
   if (!exam) return ''
 
@@ -174,24 +161,22 @@ onMounted(() => {
               v-for="(day, index) in calendarDays"
               :key="index"
               class="calendar-day"
-              :class="{ empty: !day, 'has-exam': getExamPlanningForDay(day).length > 0 }"
-              :style="getCalendarDayStyle(day)"
-              :title="getExamPlanningForDay(day).length === 1 ? getExamTooltip(getExamPlanningForDay(day)[0]) : undefined"
+              :class="{ empty: !day }"
               @click="openExamContextFromCalendar(day)"
             >
               <span v-if="day">{{ day }}</span>
 
-              <template v-if="getExamPlanningForDay(day).length > 1">
+              <template v-if="getExamPlanningForDay(day).length > 0">
                 <div class="calendar-day-indicators">
-                  <span
-                    v-for="(exam, idx) in getExamPlanningForDay(day).slice(0, 4)"
-                    :key="idx"
+                  <RouterLink
+                    v-for="exam in getExamPlanningForDay(day)"
+                    :key="exam.id"
                     class="indicator"
+                    :to="{ path: '/examens', query: { exam: exam.id } }"
                     :style="{ backgroundColor: eventTypesByValue[exam.exam_type]?.color }"
                     :title="getExamTooltip(exam)"
-                    role="img"
                     :aria-label="getExamTooltip(exam)"
-                  ></span>
+                  />
                 </div>
               </template>
             </div>
