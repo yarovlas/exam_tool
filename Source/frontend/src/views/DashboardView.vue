@@ -16,6 +16,8 @@ const examPlanningError = ref('')
 const saveExamLoading = ref(false)
 const saveExamError = ref('')
 
+const eventTypesByValue = Object.fromEntries(eventTypes.map((type) => [type.value, type]))
+
 const padDatePart = (value) => String(value).padStart(2, '0')
 
 const toIsoDate = (year, monthIndex, day) => {
@@ -79,6 +81,51 @@ const loadExamPlanning = async () => {
   }
 }
 
+const examPlanningByDate = computed(() => {
+  const grouped = new Map()
+
+  for (const exam of examPlanningItems.value) {
+    const examsForDate = grouped.get(exam.exam_date) ?? []
+    examsForDate.push(exam)
+    grouped.set(exam.exam_date, examsForDate)
+  }
+
+  return grouped
+})
+
+const getExamPlanningForDay = (day) => {
+  if (!day) {
+    return []
+  }
+
+  const dayKey = toIsoDate(currentDate.value.getFullYear(), currentDate.value.getMonth(), day)
+  return examPlanningByDate.value.get(dayKey) ?? []
+}
+
+const getCalendarDayStyle = (day) => {
+  const exams = getExamPlanningForDay(day)
+  if (exams.length !== 1) return undefined
+
+  const color = eventTypesByValue[exams[0].exam_type]?.color
+  if (!color) return undefined
+
+  return {
+    backgroundColor: color,
+    borderColor: color,
+    color: '#111827',
+  }
+}
+
+const getExamTooltip = (exam) => {
+  if (!exam) return ''
+
+  const date = formatExamDate(exam.exam_date)
+  const time = formatExamTime(exam.exam_time)
+  const type = eventTypesByValue[exam.exam_type]?.label ?? exam.exam_type
+
+  return `${type} · ${exam.room} · ${date} ${time}`
+}
+
 const submitExamPlanning = async (payload) => {
   saveExamLoading.value = true
   saveExamError.value = ''
@@ -127,10 +174,26 @@ onMounted(() => {
               v-for="(day, index) in calendarDays"
               :key="index"
               class="calendar-day"
-              :class="{ empty: !day }"
+              :class="{ empty: !day, 'has-exam': getExamPlanningForDay(day).length > 0 }"
+              :style="getCalendarDayStyle(day)"
+              :title="getExamPlanningForDay(day).length === 1 ? getExamTooltip(getExamPlanningForDay(day)[0]) : undefined"
               @click="openExamContextFromCalendar(day)"
             >
               <span v-if="day">{{ day }}</span>
+
+              <template v-if="getExamPlanningForDay(day).length > 1">
+                <div class="calendar-day-indicators">
+                  <span
+                    v-for="(exam, idx) in getExamPlanningForDay(day).slice(0, 4)"
+                    :key="idx"
+                    class="indicator"
+                    :style="{ backgroundColor: eventTypesByValue[exam.exam_type]?.color }"
+                    :title="getExamTooltip(exam)"
+                    role="img"
+                    :aria-label="getExamTooltip(exam)"
+                  ></span>
+                </div>
+              </template>
             </div>
           </div>
         </div>
