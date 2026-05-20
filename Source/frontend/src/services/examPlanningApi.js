@@ -16,10 +16,10 @@ const readError = async (response) => {
   const payload = await response.json().catch(() => null)
 
   if (payload?.detail) {
-    return typeof payload.detail === 'string' ? payload.detail : 'Request failed'
+    return typeof payload.detail === 'string' ? payload.detail : 'Verzoek mislukt'
   }
 
-  return `Request failed (${response.status})`
+  return `Verzoek mislukt (${response.status})`
 }
 
 const request = async (path, options = {}) => {

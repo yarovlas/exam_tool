@@ -155,7 +155,7 @@ const submitForm = () => {
   <div v-if="isOpen" class="context-window-backdrop" @click.self="emit('close')">
     <aside class="context-window" role="dialog" aria-modal="true" aria-label="Nieuw examen">
       <div class="context-window-header">
-        <h2>Nieuw Examen</h2>
+        <h2>Nieuw examen</h2>
         <button class="context-window-close" type="button" @click="emit('close')">×</button>
       </div>
 
@@ -178,7 +178,7 @@ const submitForm = () => {
         </label>
 
         <label>
-          <span>Examtype</span>
+          <span>Examentype</span>
           <select v-model="form.examType" required>
             <option value="practical">Praktijk</option>
             <option value="avo">AVO</option>

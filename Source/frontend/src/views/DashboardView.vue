@@ -2,7 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import ExamMakingContextWindow from '../components/ExamMakingContextWindow.vue'
-import { eventTypes } from '../constants/dashboard'
+import { eventTypes, examStatusLabels } from '../constants/dashboard'
 import { useCalendar } from '../composables/useCalendar'
 import { createExamPlanning, listExamPlanning } from '../services/examPlanningApi'
 
@@ -20,6 +20,8 @@ const saveExamError = ref('')
 const eventTypesByValue = Object.fromEntries(eventTypes.map((type) => [type.value, type]))
 
 const padDatePart = (value) => String(value).padStart(2, '0')
+const getExamTypeLabel = (value) => eventTypesByValue[value]?.label ?? value
+const getExamStatusLabel = (value) => examStatusLabels[value] ?? value
 
 const toIsoDate = (year, monthIndex, day) => {
   return `${year}-${padDatePart(monthIndex + 1)}-${padDatePart(day)}`
@@ -108,7 +110,7 @@ const getExamTooltip = (exam) => {
 
   const date = formatExamDate(exam.exam_date)
   const time = formatExamTime(exam.exam_time)
-  const type = eventTypesByValue[exam.exam_type]?.label ?? exam.exam_type
+  const type = getExamTypeLabel(exam.exam_type)
 
   return `${type} · ${exam.room} · ${date} ${time}`
 }
@@ -142,7 +144,7 @@ onMounted(() => {
       <section class="calendar-section">
         <div class="calendar-header">
           <h1>Dashboard</h1>
-          <button class="btn-new-exam" @click="openExamContextManual">+ Nieuw Examen</button>
+          <button class="btn-new-exam" @click="openExamContextManual">+ Nieuw examen</button>
         </div>
 
         <div class="calendar-card">
@@ -191,11 +193,18 @@ onMounted(() => {
           <p v-else-if="examPlanningError" class="card-error">{{ examPlanningError }}</p>
           <p v-else-if="upcomingExamens.length === 0" class="card-subtitle">Nog geen examens gepland</p>
           <div v-else class="exam-list">
-            <article v-for="exam in upcomingExamens" :key="exam.id" class="exam-item">
+            <RouterLink
+              v-for="exam in upcomingExamens"
+              :key="exam.id"
+              class="exam-item"
+              :to="{ path: '/examens', query: { exam: exam.id } }"
+              :title="getExamTooltip(exam)"
+              :aria-label="getExamTooltip(exam)"
+            >
               <p class="exam-item-date">{{ formatExamDate(exam.exam_date) }} · {{ formatExamTime(exam.exam_time) }}</p>
-              <p class="exam-item-title">{{ exam.exam_type }} · {{ exam.room }}</p>
-              <p class="exam-item-status">{{ exam.status }}</p>
-            </article>
+              <p class="exam-item-title">{{ getExamTypeLabel(exam.exam_type) }} · {{ exam.room }}</p>
+              <p class="exam-item-status">{{ getExamStatusLabel(exam.status) }}</p>
+            </RouterLink>
           </div>
         </div>
 
@@ -203,11 +212,11 @@ onMounted(() => {
           <h3 class="card-title">Statistieken</h3>
           <div class="stats">
             <div class="stat-row">
-              <span>Total studenten:</span>
+              <span>Totaal studenten:</span>
               <span>--</span>
             </div>
             <div class="stat-row">
-              <span>Total examens:</span>
+              <span>Totaal examens:</span>
               <span>{{ totalExamens }}</span>
             </div>
           </div>

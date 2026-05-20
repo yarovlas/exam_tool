@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
-import { eventTypes } from '../constants/dashboard'
+import { eventTypes, examStatusLabels } from '../constants/dashboard'
 import { listExamPlanning } from '../services/examPlanningApi'
 
 const route = useRoute()
@@ -36,6 +36,7 @@ const formatExamTime = (value) => {
 }
 
 const getExamTypeLabel = (value) => eventTypesByValue[value]?.label ?? value
+const getExamStatusLabel = (value) => examStatusLabels[value] ?? value
 
 const getSelectedExamId = () => {
   const rawId = Array.isArray(route.query.exam) ? route.query.exam[0] : route.query.exam
@@ -106,7 +107,7 @@ onMounted(() => {
     <section class="examens-layout">
       <aside class="examens-list-panel">
         <div class="panel-header">
-          <h2>Examens lijst</h2>
+          <h2>Examenlijst</h2>
           <p>{{ examPlanningLoading ? 'Laden...' : `${examPlanningItems.length} examens` }}</p>
         </div>
 
@@ -122,7 +123,7 @@ onMounted(() => {
           >
             <div class="exam-card-top">
               <span class="exam-card-date">{{ formatExamDate(exam.exam_date) }}</span>
-              <span class="exam-card-status">{{ exam.status }}</span>
+              <span class="exam-card-status">{{ getExamStatusLabel(exam.status) }}</span>
             </div>
 
             <h3>{{ getExamTypeLabel(exam.exam_type) }}</h3>
@@ -135,10 +136,10 @@ onMounted(() => {
         <div v-if="selectedExam" class="detail-card">
           <div class="detail-header">
             <div>
-              <p class="eyebrow">Detail view</p>
+              <p class="eyebrow">Detailweergave</p>
               <h2>{{ getExamTypeLabel(selectedExam.exam_type) }}</h2>
             </div>
-            <span class="detail-status">{{ selectedExam.status }}</span>
+            <span class="detail-status">{{ getExamStatusLabel(selectedExam.status) }}</span>
           </div>
 
           <div class="detail-grid">
@@ -166,7 +167,7 @@ onMounted(() => {
               Deze lijst wordt later toegevoegd zodra studenttoewijzingen beschikbaar zijn.
             </p>
             <div class="placeholder-box">
-              <span>Placeholder</span>
+              <span>Voorbeeld</span>
               <p>Hier komt een lijst met studenten die aan dit examen zijn gekoppeld.</p>
             </div>
           </div>

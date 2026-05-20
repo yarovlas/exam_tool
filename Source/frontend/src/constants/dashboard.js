@@ -16,3 +16,11 @@ export const eventTypes = [
   { value: 'vakantie', label: 'Vakantie', color: '#9B7DC2' },
   { value: 'examenweek', label: 'Examenweek', color: '#E8A3A3' },
 ]
+
+export const examStatusLabels = {
+  planned: 'Gepland',
+  scheduled: 'Ingepland',
+  in_progress: 'Bezig',
+  completed: 'Afgerond',
+  cancelled: 'Geannuleerd',
+}
