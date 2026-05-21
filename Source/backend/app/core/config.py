@@ -25,6 +25,19 @@ class Settings:
 
     database_url: str = os.getenv("DATABASE_URL", "")
 
+    mail_from: str = os.getenv("MAIL_FROM", "noreply@example.com")
+    mail_from_name: str = os.getenv("MAIL_FROM_NAME", "Exam Tool")
+    mailtrap_smtp_host: str = os.getenv("MAILTRAP_SMTP_HOST", "sandbox.smtp.mailtrap.io")
+    mailtrap_smtp_port: int = int(os.getenv("MAILTRAP_SMTP_PORT", "2525"))
+    mailtrap_smtp_username: str = os.getenv("MAILTRAP_SMTP_USERNAME", "")
+    mailtrap_smtp_password: str = os.getenv("MAILTRAP_SMTP_PASSWORD", "")
+    mailtrap_use_starttls: bool = os.getenv("MAILTRAP_USE_STARTTLS", "true").lower() in {
+        "1",
+        "true",
+        "yes",
+    }
+    mailtrap_timeout_seconds: int = int(os.getenv("MAILTRAP_TIMEOUT_SECONDS", "10"))
+
     @property
     def sqlalchemy_database_uri(self) -> str:
         if self.database_url:

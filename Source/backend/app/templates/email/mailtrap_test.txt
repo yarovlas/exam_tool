@@ -1,0 +1,7 @@
+Hallo $recipient_name,
+
+Dit is een testmail vanuit $app_name.
+
+Als je dit bericht in Mailtrap ziet, werkt de SMTP-koppeling goed.
+
+Applicatieversie: $app_version

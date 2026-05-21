@@ -68,3 +68,29 @@ Example exam for a quick database smoke test:
 ```bash
 curl -X POST http://127.0.0.1:8000/api/exam-planning/example
 ```
+
+Mailtrap test email:
+
+Add your Mailtrap sandbox SMTP credentials to `.env`:
+
+```dotenv
+MAIL_FROM=noreply@example.com
+MAIL_FROM_NAME=Exam Tool
+MAILTRAP_SMTP_HOST=sandbox.smtp.mailtrap.io
+MAILTRAP_SMTP_PORT=2525
+MAILTRAP_SMTP_USERNAME=your_mailtrap_username
+MAILTRAP_SMTP_PASSWORD=your_mailtrap_password
+MAILTRAP_USE_STARTTLS=true
+```
+
+Then send the template email:
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/email/test \
+  -H "Content-Type: application/json" \
+  -d '{
+    "to_email": "student@example.com",
+    "recipient_name": "Student",
+    "subject": "Mailtrap test vanuit Exam Tool"
+  }'
+```
