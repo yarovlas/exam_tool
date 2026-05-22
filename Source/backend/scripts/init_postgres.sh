@@ -11,7 +11,7 @@ if [[ -f "${PROJECT_ROOT}/.env" ]]; then
 fi
 
 PGHOST="${PGHOST:-localhost}"
-PGPORT="${PGPORT:-5432}"
+PGPORT="${PGPORT:-5433}"
 PGUSER="${PGUSER:-exam_admin}"
 PGPASSWORD="${PGPASSWORD:-exam_admin}"
 PGDATABASE="${PGDATABASE:-exam_tool}"
@@ -66,6 +66,22 @@ ensure_docker_postgres_running() {
   exit 1
 }
 
+wait_for_docker_postgres_ready() {
+  local attempts=30
+
+  while (( attempts > 0 )); do
+    if docker compose --file "${COMPOSE_FILE}" --project-directory "${PROJECT_ROOT}" exec -T postgres pg_isready -U "${PGUSER}" -d "${PGDATABASE}" >/dev/null 2>&1; then
+      return
+    fi
+
+    sleep 1
+    attempts=$((attempts - 1))
+  done
+
+  echo "Error: postgres container did not become ready in time."
+  exit 1
+}
+
 can_connect_local_postgres() {
   PGPASSWORD="${PGPASSWORD}" psql \
     --host "${PGHOST}" \
@@ -89,6 +105,7 @@ select_run_mode() {
     docker)
       RUN_MODE="docker"
       ensure_docker_postgres_running
+      wait_for_docker_postgres_ready
       ;;
     auto)
       if command -v psql >/dev/null 2>&1; then
@@ -100,10 +117,12 @@ select_run_mode() {
           echo "Falling back to docker compose service 'postgres'."
           RUN_MODE="docker"
           ensure_docker_postgres_running
+          wait_for_docker_postgres_ready
         fi
       else
         RUN_MODE="docker"
         ensure_docker_postgres_running
+        wait_for_docker_postgres_ready
       fi
       ;;
     *)
