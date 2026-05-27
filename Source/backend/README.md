@@ -19,6 +19,25 @@ docker compose up -d
 
 Configuratie voor API (`APP_NAME`, `APP_VERSION`, `API_PREFIX`, `CORS_ALLOWED_ORIGINS`) en database (`PG*`) wordt automatisch uit `.env` geladen.
 
+`init_postgres.sh` importeert daarna automatisch statische referentiedata uit `localfiles/output`:
+
+- studenten: `students_import_normalized_v2.csv`
+- reguliere producten: `products_regular_import_normalized.csv`
+- verrassingsopdrachten: `products_surprise_import_normalized_v2.csv`
+- beoordelaars: `assessors_import_normalized_v2.csv`
+
+Import overslaan:
+
+```bash
+IMPORT_STATIC_DATA=false ./scripts/init_postgres.sh
+```
+
+Alleen statische data opnieuw importeren:
+
+```bash
+./scripts/import_static_data.sh
+```
+
 ## Backend starten
 
 ```bash

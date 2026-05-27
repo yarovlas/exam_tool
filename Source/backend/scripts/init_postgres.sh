@@ -17,9 +17,11 @@ PGPASSWORD="${PGPASSWORD:-exam_admin}"
 PGDATABASE="${PGDATABASE:-exam_tool}"
 DB_MODE="${DB_MODE:-auto}"
 DOCKER_AUTO_START="${DOCKER_AUTO_START:-true}"
+IMPORT_STATIC_DATA="${IMPORT_STATIC_DATA:-true}"
 
 DB_MODE="$(printf '%s' "${DB_MODE}" | tr '[:upper:]' '[:lower:]')"
 DOCKER_AUTO_START="$(printf '%s' "${DOCKER_AUTO_START}" | tr '[:upper:]' '[:lower:]')"
+IMPORT_STATIC_DATA="$(printf '%s' "${IMPORT_STATIC_DATA}" | tr '[:upper:]' '[:lower:]')"
 
 escape_sql_literal() {
   local value="$1"
@@ -238,5 +240,12 @@ for migration in "${migrations[@]}"; do
   mark_migration_applied "${migration_name}"
   echo "Applied ${migration_name}."
 done
+
+if [[ "${IMPORT_STATIC_DATA}" == "true" ]]; then
+  echo "Importing static reference data..."
+  DB_MODE="${RUN_MODE}" "${SCRIPT_DIR}/import_static_data.sh"
+else
+  echo "Skipping static reference data import."
+fi
 
 echo "Database initialization complete."
