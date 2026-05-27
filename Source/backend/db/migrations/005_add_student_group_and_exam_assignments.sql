@@ -67,7 +67,7 @@ CREATE TABLE IF NOT EXISTS assignments (
 CREATE TABLE IF NOT EXISTS assignment_products (
     id BIGSERIAL PRIMARY KEY,
     assignment_id BIGINT NOT NULL REFERENCES assignments(id) ON DELETE CASCADE,
-    product_id BIGINT REFERENCES products(id) ON DELETE SET NULL,
+    product_id BIGINT REFERENCES products(id) ON DELETE RESTRICT,
     product_role VARCHAR(50) NOT NULL,
     product_order INTEGER NOT NULL DEFAULT 1,
     product_text TEXT,

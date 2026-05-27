@@ -11,7 +11,7 @@ if [[ -f "${PROJECT_ROOT}/.env" ]]; then
 fi
 
 PGHOST="${PGHOST:-localhost}"
-PGPORT="${PGPORT:-5433}"
+PGPORT="${PGPORT:-5432}"
 PGUSER="${PGUSER:-exam_admin}"
 PGPASSWORD="${PGPASSWORD:-exam_admin}"
 PGDATABASE="${PGDATABASE:-exam_tool}"
@@ -69,7 +69,7 @@ ensure_docker_postgres_running() {
 }
 
 wait_for_docker_postgres_ready() {
-  local attempts=30
+  local attempts=60
 
   while (( attempts > 0 )); do
     if docker compose --file "${COMPOSE_FILE}" --project-directory "${PROJECT_ROOT}" exec -T postgres pg_isready -U "${PGUSER}" -d "${PGDATABASE}" >/dev/null 2>&1; then
