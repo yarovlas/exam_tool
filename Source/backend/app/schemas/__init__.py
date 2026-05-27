@@ -1,3 +1,3 @@
-from app.schemas.exam_planning import ExamPlanningCreate, ExamPlanningRead
+from app.schemas.exam_planning import ExamPlanningCreate, ExamPlanningRead, ExamPlanningUpdate
 
-__all__ = ["ExamPlanningCreate", "ExamPlanningRead"]
+__all__ = ["ExamPlanningCreate", "ExamPlanningRead", "ExamPlanningUpdate"]

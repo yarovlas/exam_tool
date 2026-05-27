@@ -1,12 +1,12 @@
 from datetime import date, time
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.models.exam_planning import Base, ExamPlanning
-from app.schemas.exam_planning import ExamPlanningCreate, ExamPlanningRead
+from app.schemas.exam_planning import ExamPlanningCreate, ExamPlanningRead, ExamPlanningUpdate
 
 
 router = APIRouter(prefix="/exam-planning", tags=["exam-planning"])
@@ -31,6 +31,27 @@ def create_exam_planning(payload: ExamPlanningCreate, db: Session = Depends(get_
     )
 
     db.add(item)
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+@router.patch("/{exam_id}", response_model=ExamPlanningRead)
+def update_exam_planning(
+    exam_id: int,
+    payload: ExamPlanningUpdate,
+    db: Session = Depends(get_db),
+) -> ExamPlanning:
+    item = db.get(ExamPlanning, exam_id)
+
+    if item is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exam planning not found")
+
+    updates = payload.model_dump(exclude_unset=True)
+
+    for field, value in updates.items():
+        setattr(item, field, value)
+
     db.commit()
     db.refresh(item)
     return item

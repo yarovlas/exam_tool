@@ -16,6 +16,14 @@ class ExamPlanningCreate(BaseModel):
     status: PlanningStatus = "planned"
 
 
+class ExamPlanningUpdate(BaseModel):
+    exam_date: date | None = None
+    exam_type: ExamType | None = None
+    room: str | None = Field(default=None, min_length=1, max_length=100)
+    exam_time: time | None = None
+    status: PlanningStatus | None = None
+
+
 class ExamPlanningRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
