@@ -1,5 +1,5 @@
 from datetime import date, datetime, time
-from typing import Literal
+from typing import Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -17,11 +17,11 @@ class ExamPlanningCreate(BaseModel):
 
 
 class ExamPlanningUpdate(BaseModel):
-    exam_date: date | None = None
-    exam_type: ExamType | None = None
-    room: str | None = Field(default=None, min_length=1, max_length=100)
-    exam_time: time | None = None
-    status: PlanningStatus | None = None
+    exam_date: Optional[date] = None
+    exam_type: Optional[ExamType] = None
+    room: Optional[str] = Field(default=None, min_length=1, max_length=100)
+    exam_time: Optional[time] = None
+    status: Optional[PlanningStatus] = None
 
 
 class ExamPlanningRead(BaseModel):
@@ -35,3 +35,6 @@ class ExamPlanningRead(BaseModel):
     status: PlanningStatus
     created_at: datetime
     updated_at: datetime
+
+class ExamplanningDelete(BaseModel):
+    id: int

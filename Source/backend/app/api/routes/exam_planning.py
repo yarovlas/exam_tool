@@ -57,6 +57,17 @@ def update_exam_planning(
     return item
 
 
+@router.delete("/{exam_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_exam_planning(exam_id: int, db: Session = Depends(get_db)) -> None:
+    item = db.get(ExamPlanning, exam_id)
+
+    if item is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exam planning not found")
+
+    db.delete(item)
+    db.commit()
+
+
 @router.post("/example", response_model=ExamPlanningRead, status_code=status.HTTP_201_CREATED)
 def create_example_exam(db: Session = Depends(get_db)) -> ExamPlanning:
     Base.metadata.create_all(bind=db.get_bind())
@@ -92,3 +103,4 @@ def list_exam_planning(
     )
     items = db.execute(query).scalars().all()
     return list(items)
+
