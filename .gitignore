@@ -253,3 +253,5 @@ __marimo__/
 node_modules/
 .copilot/
 .github/
+exam_tool_swimlane.drawio
+localfiles/

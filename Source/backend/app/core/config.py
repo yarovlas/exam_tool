@@ -17,11 +17,11 @@ class Settings:
     api_prefix: str = os.getenv("API_PREFIX", "/api")
     cors_allowed_origins_raw: str = os.getenv("CORS_ALLOWED_ORIGINS", "*")
 
-    pg_host: str = os.getenv("PGHOST", "localhost")
-    pg_port: int = int(os.getenv("PGPORT", "5432"))
-    pg_user: str = os.getenv("PGUSER", "exam_admin")
-    pg_password: str = os.getenv("PGPASSWORD", "exam_admin")
-    pg_database: str = os.getenv("PGDATABASE", "exam_tool")
+    pg_host: str = os.getenv("PGHOST") or "localhost"
+    pg_port: int = int(os.getenv("PGPORT") or "5432")
+    pg_user: str = os.getenv("PGUSER") or "exam_admin"
+    pg_password: str = os.getenv("PGPASSWORD") or "exam_admin"
+    pg_database: str = os.getenv("PGDATABASE") or "exam_tool"
 
     database_url: str = os.getenv("DATABASE_URL", "")
 
