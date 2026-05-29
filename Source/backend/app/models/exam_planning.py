@@ -1,7 +1,7 @@
 from datetime import date, datetime, time
 
 from sqlalchemy import Date, DateTime, String, Time, func
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
 class Base(DeclarativeBase):
@@ -22,4 +22,9 @@ class ExamPlanning(Base):
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    # Relationship
+    exam_assessors: Mapped[list["ExamAssessor"]] = relationship(
+        "ExamAssessor", back_populates="exam_planning", cascade="all, delete-orphan"
     )
