@@ -1,7 +1,7 @@
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
@@ -35,6 +35,7 @@ def create_assessor(payload: AssessorCreate, db: Session = Depends(get_db)) -> A
 @router.get("", response_model=list[AssessorRead])
 def list_assessors(
     assessor_type: Optional[str] = Query(default=None),
+    q: Optional[str] = Query(default=None),
     limit: int = Query(default=50, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
@@ -43,6 +44,21 @@ def list_assessors(
 
     if assessor_type:
         query = query.where(Assessor.assessor_type == assessor_type)
+
+    search = q.strip() if q else ""
+    if search:
+        search_term = f"%{search}%"
+        query = query.where(
+            or_(
+                Assessor.name.ilike(search_term),
+                Assessor.organization.ilike(search_term),
+                Assessor.email.ilike(search_term),
+                Assessor.phone.ilike(search_term),
+                Assessor.address.ilike(search_term),
+                Assessor.postal_city.ilike(search_term),
+                Assessor.recruitment_status.ilike(search_term),
+            )
+        )
 
     query = (
         query.order_by(Assessor.name.asc())
