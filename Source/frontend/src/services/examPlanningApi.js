@@ -36,6 +36,11 @@ const request = async (path, options = {}) => {
     throw new Error(await readError(response))
   }
 
+  // Safely handle 204 No Content responses
+  if (response.status === 204) {
+    return null
+  }
+
   return response.json()
 }
 
@@ -47,5 +52,18 @@ export const createExamPlanning = (payload) => {
   return request('/exam-planning', {
     method: 'POST',
     body: payload,
+  })
+}
+
+export const updateExamPlanning = (id, payload) => {
+  return request(`/exam-planning/${id}`, {
+    method: 'PATCH',
+    body: payload,
+  })
+}
+
+export const deleteExamPlanning = (id) => {
+  return request(`/exam-planning/${id}`, {
+    method: 'DELETE',
   })
 }

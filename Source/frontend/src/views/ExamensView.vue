@@ -1,8 +1,8 @@
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, reactive, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { eventTypes, examStatusLabels } from '../constants/dashboard'
-import { listExamPlanning } from '../services/examPlanningApi'
+import { listExamPlanning, updateExamPlanning, deleteExamPlanning } from '../services/examPlanningApi'
 
 const route = useRoute()
 const router = useRouter()
@@ -10,6 +10,12 @@ const router = useRouter()
 const examPlanningItems = ref([])
 const examPlanningLoading = ref(false)
 const examPlanningError = ref('')
+
+const saveLoading = ref(false)
+const saveError = ref('')
+const deleteLoading = ref(false)
+const deleteError = ref('')
+const isEditing = ref(false)
 
 const eventTypesByValue = Object.fromEntries(eventTypes.map((type) => [type.value, type]))
 
@@ -51,6 +57,28 @@ const selectedExam = computed(() => {
   return examPlanningItems.value.find((exam) => exam.id === selectedExamId.value) ?? null
 })
 
+const editForm = reactive({
+  exam_date: '',
+  exam_time: '09:00',
+  room: '',
+  exam_type: 'practical',
+  status: 'planned',
+})
+
+watch(selectedExam, (exam) => {
+  isEditing.value = false
+  saveError.value = ''
+  deleteError.value = ''
+
+  if (exam) {
+    editForm.exam_date = exam.exam_date || ''
+    editForm.exam_time = exam.exam_time || '09:00'
+    editForm.room = exam.room || ''
+    editForm.exam_type = exam.exam_type || 'practical'
+    editForm.status = exam.status || 'planned'
+  }
+})
+
 const loadExamPlanning = async () => {
   examPlanningLoading.value = true
   examPlanningError.value = ''
@@ -61,6 +89,77 @@ const loadExamPlanning = async () => {
     examPlanningError.value = error instanceof Error ? error.message : 'Kon examens niet ophalen'
   } finally {
     examPlanningLoading.value = false
+  }
+}
+
+const startEdit = () => {
+  if (!selectedExam.value) return
+  saveError.value = ''
+  isEditing.value = true
+}
+
+const cancelEdit = () => {
+  isEditing.value = false
+  saveError.value = ''
+  if (selectedExam.value) {
+    // reset fields
+    editForm.exam_date = selectedExam.value.exam_date
+    editForm.exam_time = selectedExam.value.exam_time
+    editForm.room = selectedExam.value.room
+    editForm.exam_type = selectedExam.value.exam_type
+    editForm.status = selectedExam.value.status
+  }
+}
+
+const saveEdit = async () => {
+  if (!selectedExam.value) return
+  saveLoading.value = true
+  saveError.value = ''
+
+  try {
+    const payload = {
+      exam_date: editForm.exam_date,
+      exam_time: editForm.exam_time,
+      room: editForm.room,
+      exam_type: editForm.exam_type,
+      status: editForm.status,
+    }
+
+    await updateExamPlanning(selectedExam.value.id, payload)
+    await loadExamPlanning()
+    isEditing.value = false
+    // ensure the same exam remains selected
+    router.replace({ name: 'examens', query: { exam: selectedExam.value.id } })
+  } catch (error) {
+    saveError.value = error instanceof Error ? error.message : 'Opslaan mislukt'
+  } finally {
+    saveLoading.value = false
+  }
+}
+
+const confirmAndDelete = async () => {
+  if (!selectedExam.value) return
+
+  const ok = window.confirm('Weet je zeker dat je dit examen wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.')
+  if (!ok) return
+
+  deleteLoading.value = true
+  deleteError.value = ''
+
+  try {
+    await deleteExamPlanning(selectedExam.value.id)
+    await loadExamPlanning()
+
+    // select first exam if available, else clear selection
+    if (examPlanningItems.value.length > 0) {
+      router.replace({ name: 'examens', query: { exam: examPlanningItems.value[0].id } })
+    } else {
+      router.replace({ name: 'examens', query: {} })
+    }
+  } catch (error) {
+    deleteError.value = error instanceof Error ? error.message : 'Verwijderen mislukt'
+  } finally {
+    deleteLoading.value = false
   }
 }
 
@@ -137,9 +236,49 @@ onMounted(() => {
           <div class="detail-header">
             <div>
               <p class="eyebrow">Detailweergave</p>
-              <h2>{{ getExamTypeLabel(selectedExam.exam_type) }}</h2>
+              <h2 v-if="!isEditing">{{ getExamTypeLabel(selectedExam.exam_type) }}</h2>
+
+              <div v-else class="edit-inline">
+                <label>
+                  <span>Datum</span>
+                  <input type="date" v-model="editForm.exam_date" />
+                </label>
+                <label>
+                  <span>Tijd</span>
+                  <input type="time" v-model="editForm.exam_time" step="60" />
+                </label>
+                <label>
+                  <span>Locatie</span>
+                  <input type="text" v-model.trim="editForm.room" />
+                </label>
+
+                <label>
+                  <span>Type</span>
+                  <select v-model="editForm.exam_type" aria-label="Examentype">
+                    <option v-for="type in eventTypes" :key="type.value" :value="type.value">{{ type.label }}</option>
+                  </select>
+                </label>
+
+                <label>
+                  <span>Status</span>
+                  <select v-model="editForm.status" aria-label="Status">
+                    <option v-for="(label, key) in examStatusLabels" :key="key" :value="key">{{ label }}</option>
+                  </select>
+                </label>
+              </div>
             </div>
-            <span class="detail-status">{{ getExamStatusLabel(selectedExam.status) }}</span>
+
+            <div class="detail-actions">
+              <span class="detail-status" v-if="!isEditing">{{ getExamStatusLabel(selectedExam.status) }}</span>
+
+              <div class="actions">
+                <button v-if="!isEditing" class="btn-secondary" type="button" @click="startEdit">Bewerken</button>
+                <button v-if="!isEditing" class="btn-secondary" type="button" @click="confirmAndDelete" :disabled="deleteLoading">{{ deleteLoading ? 'Verwijderen...' : 'Verwijderen' }}</button>
+
+                <button v-if="isEditing" class="btn-secondary" type="button" @click="cancelEdit">Annuleren</button>
+                <button v-if="isEditing" class="btn-primary" type="button" @click="saveEdit" :disabled="saveLoading">{{ saveLoading ? 'Opslaan...' : 'Opslaan' }}</button>
+              </div>
+            </div>
           </div>
 
           <div class="detail-grid">
@@ -354,6 +493,38 @@ onMounted(() => {
   margin: 0;
   font-size: 1.8rem;
   color: #111827;
+}
+
+.detail-actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.detail-actions .actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.edit-inline {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+.edit-inline label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.edit-inline input,
+.edit-inline select {
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  padding: 0.45rem 0.6rem;
+  font-size: 0.95rem;
 }
 
 .detail-grid {
