@@ -5,6 +5,7 @@ export const navItems = [
   { label: 'Beoordelaars', to: '/beoordelaars' },
   { label: 'Opdrachten', to: '/opdrachten' },
   { label: 'Uitloggen', to: '/uitloggen' },
+  { label: 'Inloggen', to: '/inloggen' },
 ]
 
 export const eventTypes = [
