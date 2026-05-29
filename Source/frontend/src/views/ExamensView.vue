@@ -3,6 +3,7 @@ import { computed, onMounted, ref, reactive, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { eventTypes, examStatusLabels } from '../constants/dashboard'
 import { listExamPlanning, updateExamPlanning, deleteExamPlanning } from '../services/examPlanningApi'
+import { listAssessors } from '../services/assessorsApi'
 
 const route = useRoute()
 const router = useRouter()
@@ -63,7 +64,11 @@ const editForm = reactive({
   room: '',
   exam_type: 'practical',
   status: 'planned',
+  assessor_slot_1: null,
+  assessor_slot_2: null,
 })
+
+const assessorsOptions = ref([])
 
 watch(selectedExam, (exam) => {
   isEditing.value = false
@@ -76,8 +81,27 @@ watch(selectedExam, (exam) => {
     editForm.room = exam.room || ''
     editForm.exam_type = exam.exam_type || 'practical'
     editForm.status = exam.status || 'planned'
+
+    // populate assessor slots from exam_assessors
+    editForm.assessor_slot_1 = null
+    editForm.assessor_slot_2 = null
+    if (Array.isArray(exam.exam_assessors)) {
+      for (const ea of exam.exam_assessors) {
+        if (ea.assessor_order === 1) editForm.assessor_slot_1 = ea.assessor.id
+        if (ea.assessor_order === 2) editForm.assessor_slot_2 = ea.assessor.id
+      }
+    }
   }
 })
+
+const loadAssessors = async () => {
+  try {
+    assessorsOptions.value = await listAssessors({ limit: 500 })
+  } catch (e) {
+    // ignore silently for now
+    assessorsOptions.value = []
+  }
+}
 
 const loadExamPlanning = async () => {
   examPlanningLoading.value = true
@@ -108,6 +132,16 @@ const cancelEdit = () => {
     editForm.room = selectedExam.value.room
     editForm.exam_type = selectedExam.value.exam_type
     editForm.status = selectedExam.value.status
+
+    // reset assessor slots
+    editForm.assessor_slot_1 = null
+    editForm.assessor_slot_2 = null
+    if (Array.isArray(selectedExam.value.exam_assessors)) {
+      for (const ea of selectedExam.value.exam_assessors) {
+        if (ea.assessor_order === 1) editForm.assessor_slot_1 = ea.assessor.id
+        if (ea.assessor_order === 2) editForm.assessor_slot_2 = ea.assessor.id
+      }
+    }
   }
 }
 
@@ -124,6 +158,14 @@ const saveEdit = async () => {
       exam_type: editForm.exam_type,
       status: editForm.status,
     }
+
+    // build assessors array if any selected
+    const assessorsPayload = []
+    if (editForm.assessor_slot_1) assessorsPayload.push({ assessor_id: Number(editForm.assessor_slot_1), assessor_order: 1 })
+    if (editForm.assessor_slot_2) assessorsPayload.push({ assessor_id: Number(editForm.assessor_slot_2), assessor_order: 2 })
+
+    // include assessors key even if empty to clear assignments
+    payload.assessors = assessorsPayload
 
     await updateExamPlanning(selectedExam.value.id, payload)
     await loadExamPlanning()
@@ -181,8 +223,8 @@ watch(
   { immediate: true },
 )
 
-onMounted(() => {
-  loadExamPlanning()
+onMounted(async () => {
+  await Promise.all([loadExamPlanning(), loadAssessors()])
 })
 </script>
 
@@ -297,6 +339,52 @@ onMounted(() => {
             <div class="detail-item">
               <span>Type</span>
               <strong>{{ getExamTypeLabel(selectedExam.exam_type) }}</strong>
+            </div>
+          </div>
+
+          <div class="detail-section">
+            <h3>Beoordelaars</h3>
+
+            <div v-if="!isEditing">
+              <div v-if="selectedExam.exam_assessors && selectedExam.exam_assessors.length">
+                <ul style="list-style:none; padding:0; display:flex; gap:0.75rem; flex-direction:row">
+                  <li v-for="ea in selectedExam.exam_assessors" :key="ea.id">
+                    <div style="padding:0.5rem 0.75rem; border-radius:0.6rem; background:#f8fafc; border:1px solid #e5e7eb">
+                      <div style="font-weight:600">{{ ea.assessor.name }}</div>
+                      <div style="font-size:0.85rem; color:#6b7280">{{ ea.assessor.organization || '—' }} · Slot {{ ea.assessor_order }}</div>
+                    </div>
+                  </li>
+                </ul>
+              </div>
+              <div v-else>
+                <p class="placeholder-copy">Nog geen beoordelaars toegewezen.</p>
+              </div>
+            </div>
+
+            <div v-else class="edit-inline" style="flex-direction:column; align-items:flex-start">
+              <div style="display:flex; gap:0.6rem; width:100%">
+                <label style="flex:1">
+                  <span>Beoordelaar slot 1</span>
+                  <select v-model="editForm.assessor_slot_1">
+                    <option :value="null">— Geen —</option>
+                    <option v-for="a in assessorsOptions" :key="a.id" :value="a.id" :disabled="editForm.assessor_slot_2 && Number(editForm.assessor_slot_2) === a.id">
+                      {{ a.name }}{{ a.organization ? ' · ' + a.organization : '' }}
+                    </option>
+                  </select>
+                </label>
+
+                <label style="flex:1">
+                  <span>Beoordelaar slot 2</span>
+                  <select v-model="editForm.assessor_slot_2">
+                    <option :value="null">— Geen —</option>
+                    <option v-for="a in assessorsOptions" :key="a.id" :value="a.id" :disabled="editForm.assessor_slot_1 && Number(editForm.assessor_slot_1) === a.id">
+                      {{ a.name }}{{ a.organization ? ' · ' + a.organization : '' }}
+                    </option>
+                  </select>
+                </label>
+              </div>
+
+              <p v-if="saveError" class="panel-error">{{ saveError }}</p>
             </div>
           </div>
 

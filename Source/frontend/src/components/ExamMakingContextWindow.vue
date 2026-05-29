@@ -1,5 +1,6 @@
 <script setup>
 import { computed, reactive, ref, watch } from 'vue'
+import { listAssessors } from '../services/assessorsApi'
 
 const props = defineProps({
   isOpen: {
@@ -32,8 +33,11 @@ const form = reactive({
   room: '',
   examType: 'practical',
   status: 'planned',
+  assessor_slot_1: null,
+  assessor_slot_2: null,
 })
 
+const assessorsOptions = ref([])
 const localError = ref('')
 
 const modeText = computed(() => {
@@ -50,14 +54,17 @@ const resetForm = (selectedDate = '') => {
   form.room = ''
   form.examType = 'practical'
   form.status = 'planned'
+  form.assessor_slot_1 = null
+  form.assessor_slot_2 = null
   localError.value = ''
 }
 
 watch(
   () => props.isOpen,
-  (isOpen) => {
+  async (isOpen) => {
     if (isOpen) {
       resetForm(props.date)
+      await loadAssessors()
       validateSelectedDateTime()
     }
   },
@@ -78,6 +85,14 @@ watch(
     if (props.isOpen) validateSelectedDateTime()
   },
 )
+
+const loadAssessors = async () => {
+  try {
+    assessorsOptions.value = await listAssessors({ limit: 500 })
+  } catch (e) {
+    assessorsOptions.value = []
+  }
+}
 
 const validateSelectedDateTime = () => {
   localError.value = ''
@@ -141,13 +156,21 @@ const submitForm = () => {
     return
   }
 
-  emit('submit', {
+  const payload = {
     exam_date: form.examDate,
     exam_type: form.examType,
     room: form.room.trim(),
     exam_time: toExamTime(form.examTime),
     status: form.status,
-  })
+  }
+
+  const assessorsPayload = []
+  if (form.assessor_slot_1) assessorsPayload.push({ assessor_id: Number(form.assessor_slot_1), assessor_order: 1 })
+  if (form.assessor_slot_2) assessorsPayload.push({ assessor_id: Number(form.assessor_slot_2), assessor_order: 2 })
+
+  if (assessorsPayload.length) payload.assessors = assessorsPayload
+
+  emit('submit', payload)
 }
 </script>
 
@@ -184,6 +207,26 @@ const submitForm = () => {
             <option value="avo">AVO</option>
             <option value="keuzedeel">Keuzedeel</option>
             <option value="profialdeel">Profialdeel</option>
+          </select>
+        </label>
+
+        <label>
+          <span>Beoordelaar slot 1</span>
+          <select v-model="form.assessor_slot_1">
+            <option :value="null">— Geen —</option>
+            <option v-for="a in assessorsOptions" :key="a.id" :value="a.id" :disabled="form.assessor_slot_2 && Number(form.assessor_slot_2) === a.id">
+              {{ a.name }}{{ a.organization ? ' · ' + a.organization : '' }}
+            </option>
+          </select>
+        </label>
+
+        <label>
+          <span>Beoordelaar slot 2</span>
+          <select v-model="form.assessor_slot_2">
+            <option :value="null">— Geen —</option>
+            <option v-for="a in assessorsOptions" :key="a.id" :value="a.id" :disabled="form.assessor_slot_1 && Number(form.assessor_slot_1) === a.id">
+              {{ a.name }}{{ a.organization ? ' · ' + a.organization : '' }}
+            </option>
           </select>
         </label>
 
