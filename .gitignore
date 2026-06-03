@@ -253,6 +253,7 @@ __marimo__/
 node_modules/
 .copilot/
 .github/
+.opencode/
 exam_tool_swimlane.drawio
 exam_tool_sequence.drawio
 localfiles/
