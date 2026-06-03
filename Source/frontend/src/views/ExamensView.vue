@@ -278,40 +278,11 @@ onMounted(async () => {
           <div class="detail-header">
             <div>
               <p class="eyebrow">Detailweergave</p>
-              <h2 v-if="!isEditing">{{ getExamTypeLabel(selectedExam.exam_type) }}</h2>
-
-              <div v-else class="edit-inline">
-                <label>
-                  <span>Datum</span>
-                  <input type="date" v-model="editForm.exam_date" />
-                </label>
-                <label>
-                  <span>Tijd</span>
-                  <input type="time" v-model="editForm.exam_time" step="60" />
-                </label>
-                <label>
-                  <span>Locatie</span>
-                  <input type="text" v-model.trim="editForm.room" />
-                </label>
-
-                <label>
-                  <span>Type</span>
-                  <select v-model="editForm.exam_type" aria-label="Examentype">
-                    <option v-for="type in eventTypes" :key="type.value" :value="type.value">{{ type.label }}</option>
-                  </select>
-                </label>
-
-                <label>
-                  <span>Status</span>
-                  <select v-model="editForm.status" aria-label="Status">
-                    <option v-for="(label, key) in examStatusLabels" :key="key" :value="key">{{ label }}</option>
-                  </select>
-                </label>
-              </div>
+              <h2>{{ getExamTypeLabel(selectedExam.exam_type) }}</h2>
             </div>
 
             <div class="detail-actions">
-              <span class="detail-status" v-if="!isEditing">{{ getExamStatusLabel(selectedExam.status) }}</span>
+              <span class="detail-status">{{ getExamStatusLabel(selectedExam.status) }}</span>
 
               <div class="actions">
                 <button v-if="!isEditing" class="btn-secondary" type="button" @click="startEdit">Bewerken</button>
@@ -323,22 +294,51 @@ onMounted(async () => {
             </div>
           </div>
 
-          <div class="detail-grid">
-            <div class="detail-item">
-              <span>Datum</span>
-              <strong>{{ formatExamDate(selectedExam.exam_date) }}</strong>
+          <div>
+            <div v-if="!isEditing" class="detail-grid">
+              <div class="detail-item">
+                <span>Datum</span>
+                <strong>{{ formatExamDate(selectedExam.exam_date) }}</strong>
+              </div>
+              <div class="detail-item">
+                <span>Tijd</span>
+                <strong>{{ formatExamTime(selectedExam.exam_time) }}</strong>
+              </div>
+              <div class="detail-item">
+                <span>Locatie</span>
+                <strong>{{ selectedExam.room }}</strong>
+              </div>
+              <div class="detail-item">
+                <span>Type</span>
+                <strong>{{ getExamTypeLabel(selectedExam.exam_type) }}</strong>
+              </div>
             </div>
-            <div class="detail-item">
-              <span>Tijd</span>
-              <strong>{{ formatExamTime(selectedExam.exam_time) }}</strong>
-            </div>
-            <div class="detail-item">
-              <span>Locatie</span>
-              <strong>{{ selectedExam.room }}</strong>
-            </div>
-            <div class="detail-item">
-              <span>Type</span>
-              <strong>{{ getExamTypeLabel(selectedExam.exam_type) }}</strong>
+
+            <div v-else class="edit-form">
+              <label>
+                <span>Datum</span>
+                <input type="date" v-model="editForm.exam_date" />
+              </label>
+              <label>
+                <span>Tijd</span>
+                <input type="time" v-model="editForm.exam_time" step="60" />
+              </label>
+              <label>
+                <span>Locatie</span>
+                <input type="text" v-model.trim="editForm.room" />
+              </label>
+              <label>
+                <span>Type</span>
+                <select v-model="editForm.exam_type" aria-label="Examentype">
+                  <option v-for="type in eventTypes" :key="type.value" :value="type.value">{{ type.label }}</option>
+                </select>
+              </label>
+              <label>
+                <span>Status</span>
+                <select v-model="editForm.status" aria-label="Status">
+                  <option v-for="(label, key) in examStatusLabels" :key="key" :value="key">{{ label }}</option>
+                </select>
+              </label>
             </div>
           </div>
 
@@ -361,7 +361,7 @@ onMounted(async () => {
               </div>
             </div>
 
-            <div v-else class="edit-inline" style="flex-direction:column; align-items:flex-start">
+            <div v-else style="display:flex; flex-direction:column; gap:0.6rem; align-items:flex-start; width:100%">
               <div style="display:flex; gap:0.6rem; width:100%">
                 <label style="flex:1">
                   <span>Beoordelaar slot 1</span>
@@ -569,6 +569,12 @@ onMounted(async () => {
   min-height: 100%;
 }
 
+.detail-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
 .detail-header {
   display: flex;
   justify-content: space-between;
@@ -595,31 +601,29 @@ onMounted(async () => {
   align-items: center;
 }
 
-.edit-inline {
-  display: flex;
-  gap: 0.6rem;
-  align-items: center;
+.detail-grid,
+.edit-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
 }
 
-.edit-inline label {
+.edit-form label {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
 }
 
-.edit-inline input,
-.edit-inline select {
+.edit-form input,
+.edit-form select {
+  width: 100%;
+  min-width: 0;
   border: 1px solid #d1d5db;
   border-radius: 0.5rem;
-  padding: 0.45rem 0.6rem;
+  padding: 0.55rem 0.65rem;
+  background: #fff;
+  color: #111827;
   font-size: 0.95rem;
-}
-
-.detail-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1rem;
-  margin-bottom: 1.5rem;
 }
 
 .detail-item {
@@ -633,7 +637,8 @@ onMounted(async () => {
 }
 
 .detail-item span,
-.placeholder-copy {
+.placeholder-copy,
+.edit-form label span {
   color: #6b7280;
   font-size: 0.9rem;
 }
@@ -690,7 +695,15 @@ onMounted(async () => {
     flex-direction: column;
   }
 
-  .detail-grid {
+  .detail-header,
+  .detail-actions,
+  .detail-actions .actions {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .detail-grid,
+  .edit-form {
     grid-template-columns: 1fr;
   }
 }
