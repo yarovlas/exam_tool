@@ -1,6 +1,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { listAssessors, createAssessor, updateAssessor, deleteAssessor } from '../services/assessorsApi'
+import { assessorTypeColors } from '../constants/dashboard'
 
 const assessors = ref([])
 const loading = ref(false)
@@ -23,6 +24,11 @@ const assessorTypeLabels = {
 }
 
 const getAssessorTypeLabel = (value) => assessorTypeLabels[value] ?? value
+
+const getAssessorBadgeStyle = (type) => {
+  const colors = assessorTypeColors[type]
+  return colors ? { backgroundColor: colors.bg, color: colors.text } : {}
+}
 
 const filteredAssessors = computed(() => {
   const search = q.value.trim().toLowerCase()
@@ -221,7 +227,7 @@ const confirmDelete = async () => {
           >
             <div class="exam-card-top">
               <span class="exam-card-date">{{ a.organization || 'Geen organisatie' }}</span>
-              <span class="exam-card-status">{{ getAssessorTypeLabel(a.assessor_type) }}</span>
+              <span class="exam-card-status" :style="getAssessorBadgeStyle(a.assessor_type)">{{ getAssessorTypeLabel(a.assessor_type) }}</span>
             </div>
 
             <h3>{{ a.name }}</h3>
@@ -305,7 +311,7 @@ const confirmDelete = async () => {
             </div>
 
             <div class="detail-actions">
-              <span class="detail-status" v-if="!isEditing">{{ getAssessorTypeLabel(selected.assessor_type) }}</span>
+              <span class="detail-status" v-if="!isEditing" :style="getAssessorBadgeStyle(selected.assessor_type)">{{ getAssessorTypeLabel(selected.assessor_type) }}</span>
 
               <div class="actions">
                 <button class="btn-secondary" v-if="!isEditing" type="button" @click="startEdit">Bewerken</button>
@@ -551,6 +557,7 @@ const confirmDelete = async () => {
 .exam-card-top {
   display: flex;
   justify-content: space-between;
+  align-items: flex-start;
   gap: 1rem;
   margin-bottom: 0.65rem;
 }

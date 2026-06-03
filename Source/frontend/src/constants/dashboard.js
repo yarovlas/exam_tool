@@ -18,6 +18,11 @@ export const eventTypes = [
   { value: 'examenweek', label: 'Examenweek', color: '#E8A3A3' },
 ]
 
+export const assessorTypeColors = {
+  teacher: { bg: '#dbeafe', text: '#1e40af' },
+  external: { bg: '#e8dff5', text: '#7c3aed' },
+}
+
 export const examStatusLabels = {
   planned: 'Gepland',
   scheduled: 'Ingepland',
