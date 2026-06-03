@@ -18,8 +18,8 @@ const filterType = ref('')
 const q = ref('')
 
 const assessorTypeLabels = {
-  teacher: 'Teacher',
-  external: 'External',
+  teacher: 'Interne',
+  external: 'Externe',
 }
 
 const getAssessorTypeLabel = (value) => assessorTypeLabels[value] ?? value
@@ -198,8 +198,7 @@ const confirmDelete = async () => {
         <div class="panel-controls">
           <select v-model="filterType" aria-label="Type beoordelaar" @change="load">
             <option value="">Alle types</option>
-            <option value="teacher">Teacher</option>
-            <option value="external">External</option>
+            <option v-for="(label, val) in assessorTypeLabels" :key="val" :value="val">{{ label }}</option>
           </select>
           <input v-model.trim="q" type="search" placeholder="Zoeken..." @keyup.enter="load" />
           <button class="btn-secondary" type="button" @click="load">Zoeken</button>
@@ -251,8 +250,7 @@ const confirmDelete = async () => {
             <label>
               <span>Type</span>
               <select v-model="createForm.assessor_type">
-                <option value="teacher">Teacher</option>
-                <option value="external">External</option>
+                <option v-for="(label, val) in assessorTypeLabels" :key="val" :value="val">{{ label }}</option>
               </select>
             </label>
 
@@ -351,8 +349,7 @@ const confirmDelete = async () => {
               <label>
                 <span>Type</span>
                 <select v-model="editForm.assessor_type">
-                  <option value="teacher">Teacher</option>
-                  <option value="external">External</option>
+                  <option v-for="(label, val) in assessorTypeLabels" :key="val" :value="val">{{ label }}</option>
                 </select>
               </label>
 
