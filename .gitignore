@@ -255,3 +255,6 @@ node_modules/
 .github/
 exam_tool_swimlane.drawio
 localfiles/
+.opencode/
+exam_tool_sequence.drawio
+exam_tool_class_diagram.drawio
