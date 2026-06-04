@@ -1,7 +1,10 @@
 <script setup>
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 
 import { changePassword } from '../services/authApi'
+
+const router = useRouter()
 
 const currentPassword = ref('')
 const newPassword = ref('')
@@ -34,10 +37,9 @@ const submit = async () => {
 
   try {
     await changePassword(currentPassword.value, newPassword.value)
-    success.value = 'Wachtwoord gewijzigd'
-    currentPassword.value = ''
-    newPassword.value = ''
-    newPasswordConfirm.value = ''
+    success.value = 'Wachtwoord gewijzigd. U wordt doorgestuurd...'
+    await new Promise((resolve) => setTimeout(resolve, 1000))
+    router.push('/')
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'Wijzigen mislukt'
   } finally {
