@@ -4,8 +4,7 @@ export const navItems = [
   { label: 'Studenten', to: '/studenten' },
   { label: 'Beoordelaars', to: '/beoordelaars' },
   { label: 'Opdrachten', to: '/opdrachten' },
-  { label: 'Uitloggen', to: '/uitloggen' },
-  { label: 'Inloggen', to: '/inloggen' },
+  { label: 'Wachtwoord', to: '/wachtwoord' },
 ]
 
 export const eventTypes = [
