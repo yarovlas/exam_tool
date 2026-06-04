@@ -25,6 +25,13 @@ class Settings:
 
     database_url: str = os.getenv("DATABASE_URL", "")
 
+    # Auth settings — used as seed defaults when app_auth table is empty
+    auth_email: str = os.getenv("AUTH_EMAIL", "admin@talland.nl")
+    auth_password: str = os.getenv("AUTH_PASSWORD", "")
+    jwt_secret: str = os.getenv("JWT_SECRET", "")
+    jwt_algorithm: str = os.getenv("JWT_ALGORITHM", "HS256")
+    jwt_expiry_minutes: int = int(os.getenv("JWT_EXPIRY_MINUTES", "480"))
+
     @property
     def sqlalchemy_database_uri(self) -> str:
         if self.database_url:
