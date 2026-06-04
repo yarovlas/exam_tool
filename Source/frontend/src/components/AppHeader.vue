@@ -1,5 +1,20 @@
 <script setup>
+import { computed } from 'vue'
 import { navItems } from '../constants/dashboard'
+import { useAuthStore } from '../services/authStore'
+
+const { isAuthenticated } = useAuthStore()
+
+const visibleNavItems = computed(() => {
+  if (!isAuthenticated.value) {
+    return [{ label: 'Inloggen', to: '/inloggen' }]
+  }
+
+  return [
+    ...navItems,
+    { label: 'Uitloggen', to: '/uitloggen' },
+  ]
+})
 </script>
 
 <template>
@@ -11,7 +26,7 @@ import { navItems } from '../constants/dashboard'
       </div>
       <nav class="nav">
         <RouterLink
-          v-for="item in navItems"
+          v-for="item in visibleNavItems"
           :key="item.label"
           :to="item.to"
           class="nav-item"

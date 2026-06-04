@@ -1,18 +1,14 @@
 <script setup>
-/*
-
-I DON'T KNOW IF ANY OF THIS IS NEEDED
-
-import { computed, onMounted, ref } from 'vue'
-import { RouterLink } from 'vue-router'
-import ExamMakingContextWindow from '../components/ExamMakingContextWindow.vue'
-import { eventTypes, examStatusLabels } from '../constants/dashboard.js'
-import { useCalendar } from '../composables/useCalendar.js'
-import { createExamPlanning, listExamPlanning } from '../services/examPlanningApi.js'
-
-*/
-
 import { ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+
+import { login } from '../services/authApi'
+import { useAuthStore } from '../services/authStore'
+
+const route = useRoute()
+const router = useRouter()
+
+const { setAuth } = useAuthStore()
 
 const email = ref('')
 const password = ref('')
@@ -28,24 +24,13 @@ const submitLogin = async () => {
     return
   }
 
-  if (!email.value.includes('@')) {
-    loginError.value = 'Ongeldig e-mailadres'
-    return
-  }
-
   loginLoading.value = true
 
   try {
-    await new Promise((resolve) => setTimeout(resolve, 500))
-
-    if (
-      email.value === 'admin@test.com' &&
-      password.value === '123456'
-    ) {
-      console.log('Login correct')
-    } else {
-      throw new Error('Onjuiste gegevens')
-    }
+    const result = await login(email.value, password.value)
+    setAuth(result.access_token, email.value)
+    const redirect = route.query.redirect || '/'
+    router.push(redirect)
   } catch (error) {
     loginError.value =
       error instanceof Error
