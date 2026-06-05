@@ -5,7 +5,7 @@ import { eventTypes, examStatusLabels } from '../constants/dashboard'
 import { listExamPlanning, updateExamPlanning, deleteExamPlanning } from '../services/examPlanningApi'
 import { listAssessors } from '../services/assessorsApi'
 import { listStudents } from '../services/studentsApi'
-import { createExamStudent, deleteExamStudent } from '../services/examStudentsApi'
+import { createExamStudent, updateExamStudent, deleteExamStudent } from '../services/examStudentsApi'
 import { createExamAssessor, deleteExamAssessor } from '../services/examAssessorsApi'
 
 const route = useRoute()
@@ -240,6 +240,18 @@ const linkStudent = async () => {
   }
 }
 
+const updateStudentField = async (examStudentId, field, value) => {
+  try {
+    await updateExamStudent(examStudentId, { [field]: value })
+    await loadExamPlanning()
+    if (selectedExam.value) {
+      router.replace({ name: 'examens', query: { exam: selectedExam.value.id } })
+    }
+  } catch (e) {
+    console.error(e)
+  }
+}
+
 const unlinkStudent = async (examStudentId) => {
   studentActionLoading.value = true
   try {
@@ -444,16 +456,37 @@ const unlinkAssessor = async (examAssessorId) => {
           <div class="detail-section">
             <h3>Toegewezen studenten</h3>
 
-            <div v-if="selectedExam.exam_students && selectedExam.exam_students.length">
-              <ul style="list-style:none; padding:0; display:flex; flex-direction:column; gap:0.5rem">
-                <li v-for="es in selectedExam.exam_students" :key="es.id" style="display:flex; justify-content:space-between; align-items:center; padding:0.5rem 0.75rem; border-radius:0.6rem; background:#f8fafc; border:1px solid #e5e7eb">
-                  <div>
-                    <div style="font-weight:600">{{ es.student.name }}</div>
-                    <div style="font-size:0.85rem; color:#6b7280">{{ es.student.student_number }}</div>
-                  </div>
-                  <button type="button" style="border:none; background:none; cursor:pointer; font-size:1.1rem; color:#b91c1c; padding:0.25rem" :disabled="studentActionLoading" @click="unlinkStudent(es.id)">×</button>
-                </li>
-              </ul>
+            <div v-if="selectedExam.exam_students && selectedExam.exam_students.length" style="overflow-x:auto">
+              <table style="width:100%; border-collapse:collapse; font-size:0.9rem">
+                <thead>
+                  <tr style="border-bottom:2px solid #e5e7eb">
+                    <th style="text-align:left; padding:0.5rem 0.75rem; color:#6b7280; font-weight:600">Naam</th>
+                    <th style="text-align:left; padding:0.5rem 0.75rem; color:#6b7280; font-weight:600">SchoolID</th>
+                    <th style="text-align:left; padding:0.5rem 0.75rem; color:#6b7280; font-weight:600">Opdracht</th>
+                    <th style="text-align:left; padding:0.5rem 0.75rem; color:#6b7280; font-weight:600">Resultaat</th>
+                    <th style="padding:0.5rem 0.75rem; width:40px"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="es in selectedExam.exam_students" :key="es.id" style="border-bottom:1px solid #f3f4f6">
+                    <td style="padding:0.5rem 0.75rem; font-weight:600">{{ es.student.name }}</td>
+                    <td style="padding:0.5rem 0.75rem; color:#6b7280">{{ es.student.student_number }}</td>
+                    <td style="padding:0.35rem 0.75rem">
+                      <div style="display:flex; align-items:center; gap:0.4rem">
+                        <span style="font-size:0.85rem; color:#374151">—</span>
+                        <button type="button" style="border:1px solid #d1d5db; border-radius:0.4rem; padding:0.25rem 0.5rem; font-size:0.8rem; background:#fff; cursor:pointer; color:#374151">Bekijken</button>
+                        <button type="button" style="border:1px solid #d1d5db; border-radius:0.4rem; padding:0.25rem 0.5rem; font-size:0.8rem; background:#fff; cursor:pointer; color:#374151; white-space:nowrap">Toewijzen</button>
+                      </div>
+                    </td>
+                    <td style="padding:0.35rem 0.75rem">
+                      <input type="text" :value="es.result || ''" @blur="updateStudentField(es.id, 'result', $event.target.value || null)" style="width:100%; min-width:80px; border:1px solid #d1d5db; border-radius:0.4rem; padding:0.35rem 0.5rem; font-size:0.85rem; background:#fff" placeholder="—" />
+                    </td>
+                    <td style="padding:0.5rem 0.75rem">
+                      <button type="button" style="border:none; background:none; cursor:pointer; font-size:1.1rem; color:#b91c1c; padding:0.25rem" :disabled="studentActionLoading" @click="unlinkStudent(es.id)">×</button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
             <div v-else>
               <p class="placeholder-copy">Nog geen studenten toegewezen.</p>
