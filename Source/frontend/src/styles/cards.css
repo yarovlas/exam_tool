@@ -1,0 +1,108 @@
+.exam-card {
+  display: block;
+  width: 100%;
+  padding: var(--spacing-lg);
+  border-radius: var(--radius-2xl);
+  border: 1px solid var(--color-border-light);
+  background: var(--color-surface);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+  text-decoration: none;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.exam-card:hover,
+.exam-card.active {
+  border-color: #9ca3af;
+  box-shadow: var(--shadow-hover);
+}
+
+.exam-card-top {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--spacing-lg);
+  margin-bottom: 0.65rem;
+}
+
+.exam-card h3 {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  color: var(--color-text-primary);
+}
+
+.exam-card-date,
+.exam-card-meta,
+.detail-meta {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-base);
+}
+
+.exam-card-meta,
+.detail-meta {
+  margin: 0.35rem 0 0;
+}
+
+.exam-card-status,
+.detail-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.2rem 0.6rem;
+  border-radius: var(--radius-full);
+  background: var(--color-badge-bg);
+  color: var(--color-badge-text);
+  font-size: var(--font-size-xs);
+  text-transform: capitalize;
+}
+
+.detail-card,
+.detail-empty {
+  padding: var(--spacing-2xl);
+  min-height: 100%;
+}
+
+.detail-item {
+  padding: 0.95rem var(--spacing-lg);
+  border-radius: var(--radius-xl);
+  background: var(--color-detail-bg);
+  border: 1px solid var(--color-border-light);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.detail-item span,
+.edit-form label span {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-base);
+}
+
+.detail-item strong {
+  color: var(--color-text-primary);
+  font-size: var(--font-size-lg);
+}
+
+.detail-empty {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 420px;
+}
+
+.detail-empty p {
+  margin: 0.75rem 0 0;
+  color: var(--color-text-muted);
+}
+
+.detail-section h3 {
+  margin: 0 0 var(--spacing-md);
+  color: var(--color-text-primary);
+}
+
+.placeholder-copy {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-base);
+}

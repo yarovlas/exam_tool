@@ -76,74 +76,8 @@ const submitLogin = async () => {
 </template>
 
 <style scoped>
-.login-layout {
-  min-height: calc(100vh - 120px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.login-card {
-  width: 100%;
-  max-width: 420px;
-  background-color: white;
-  border-radius: 0.75rem;
-  padding: 2rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  gap: 3rem;
-}
-
-.login-header {
-  margin-bottom: 2rem;
-}
-
-.login-header h1 {
-  font-size: 2rem;
-  color: #1a1a1a;
-  margin-bottom: 0.5rem;
-}
-
 .login-header p {
   color: #666;
   font-size: 0.95rem;
-}
-
-.login-form {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.login-field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-}
-
-.login-field span {
-  font-size: 0.875rem;
-  color: #374151;
-  font-weight: 600;
-}
-
-.login-field input {
-  border: 1px solid #d1d5db;
-  border-radius: 0.5rem;
-  padding: 0.7rem 0.75rem;
-  font-size: 0.95rem;
-  font-family: inherit;
-}
-
-.login-field input:focus {
-  outline: none;
-  border-color: #7c3aed;
-}
-
-.login-error {
-  font-size: 0.85rem;
-  color: #b91c1c;
-}
-.btn-primary {
-  margin-top: 1rem;
 }
 </style>
