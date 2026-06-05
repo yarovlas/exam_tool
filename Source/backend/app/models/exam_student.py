@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import DateTime, ForeignKey, String, func
+from sqlalchemy import DateTime, ForeignKey, String, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.exam_planning import Base
@@ -9,6 +9,9 @@ from app.models.exam_planning import Base
 
 class ExamStudent(Base):
     __tablename__ = "exam_students"
+    __table_args__ = (
+        UniqueConstraint("exam_planning_id", "student_id", name="exam_students_exam_student_unique"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     exam_planning_id: Mapped[int] = mapped_column(ForeignKey("exam_planning.id", ondelete="CASCADE"))
