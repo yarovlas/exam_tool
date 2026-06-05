@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import String, func, Integer, ForeignKey, DateTime
+from sqlalchemy import CheckConstraint, String, func, Integer, ForeignKey, DateTime, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.exam_planning import Base
@@ -35,6 +35,11 @@ class Assessor(Base):
 
 class ExamAssessor(Base):
     __tablename__ = "exam_assessors"
+    __table_args__ = (
+        UniqueConstraint("exam_planning_id", "assessor_order", name="exam_assessors_unique_slot"),
+        UniqueConstraint("exam_planning_id", "assessor_id", name="exam_assessors_unique_assessor"),
+        CheckConstraint("assessor_order IN (1, 2)", name="exam_assessors_order_check"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     exam_planning_id: Mapped[int] = mapped_column(ForeignKey("exam_planning.id", ondelete="CASCADE"))
