@@ -6,8 +6,8 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.models.exam_planning import Base, ExamPlanning
-from app.models.assessor import ExamAssessor
-from app.models.exam_student import ExamStudent
+
+
 from app.schemas.exam_planning import ExamPlanningCreate, ExamPlanningRead, ExamPlanningUpdate
 
 
@@ -33,29 +33,6 @@ def create_exam_planning(payload: ExamPlanningCreate, db: Session = Depends(get_
     )
 
     db.add(item)
-    db.flush()  # Flush to get the ID without committing
-
-    # Add assessors if provided
-    if payload.assessors:
-        for assessor_data in payload.assessors:
-            exam_assessor = ExamAssessor(
-                exam_planning_id=item.id,
-                assessor_id=assessor_data.assessor_id,
-                assessor_order=assessor_data.assessor_order,
-            )
-            db.add(exam_assessor)
-
-    # Add students if provided
-    if payload.students:
-        for student_data in payload.students:
-            exam_student = ExamStudent(
-                exam_planning_id=item.id,
-                student_id=student_data.student_id,
-                phase=student_data.phase,
-                result=student_data.result,
-            )
-            db.add(exam_student)
-
     db.commit()
     db.refresh(item)
     return item
@@ -72,40 +49,10 @@ def update_exam_planning(
     if item is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exam planning not found")
 
-    # Update basic fields
-    updates = payload.model_dump(exclude_unset=True, exclude={"assessors", "students"})
+    updates = payload.model_dump(exclude_unset=True)
 
     for field, value in updates.items():
         setattr(item, field, value)
-
-    # Handle assessors update if provided
-    if payload.assessors is not None:
-        # Delete existing assessors
-        db.query(ExamAssessor).filter(ExamAssessor.exam_planning_id == exam_id).delete()
-
-        # Add new assessors
-        for assessor_data in payload.assessors:
-            exam_assessor = ExamAssessor(
-                exam_planning_id=exam_id,
-                assessor_id=assessor_data.assessor_id,
-                assessor_order=assessor_data.assessor_order,
-            )
-            db.add(exam_assessor)
-
-    # Handle students update if provided
-    if payload.students is not None:
-        # Delete existing students
-        db.query(ExamStudent).filter(ExamStudent.exam_planning_id == exam_id).delete()
-
-        # Add new students
-        for student_data in payload.students:
-            exam_student = ExamStudent(
-                exam_planning_id=exam_id,
-                student_id=student_data.student_id,
-                phase=student_data.phase,
-                result=student_data.result,
-            )
-            db.add(exam_student)
 
     db.commit()
     db.refresh(item)
