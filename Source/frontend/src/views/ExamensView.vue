@@ -4,6 +4,9 @@ import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { eventTypes, examStatusLabels } from '../constants/dashboard'
 import { listExamPlanning, updateExamPlanning, deleteExamPlanning } from '../services/examPlanningApi'
 import { listAssessors } from '../services/assessorsApi'
+import { listStudents } from '../services/studentsApi'
+import { createExamStudent, updateExamStudent, deleteExamStudent } from '../services/examStudentsApi'
+import { createExamAssessor, deleteExamAssessor } from '../services/examAssessorsApi'
 
 const route = useRoute()
 const router = useRouter()
@@ -64,11 +67,10 @@ const editForm = reactive({
   room: '',
   exam_type: 'practical',
   status: 'planned',
-  assessor_slot_1: null,
-  assessor_slot_2: null,
 })
 
 const assessorsOptions = ref([])
+const studentsOptions = ref([])
 
 watch(selectedExam, (exam) => {
   isEditing.value = false
@@ -82,15 +84,6 @@ watch(selectedExam, (exam) => {
     editForm.exam_type = exam.exam_type || 'practical'
     editForm.status = exam.status || 'planned'
 
-    // populate assessor slots from exam_assessors
-    editForm.assessor_slot_1 = null
-    editForm.assessor_slot_2 = null
-    if (Array.isArray(exam.exam_assessors)) {
-      for (const ea of exam.exam_assessors) {
-        if (ea.assessor_order === 1) editForm.assessor_slot_1 = ea.assessor.id
-        if (ea.assessor_order === 2) editForm.assessor_slot_2 = ea.assessor.id
-      }
-    }
   }
 })
 
@@ -98,8 +91,15 @@ const loadAssessors = async () => {
   try {
     assessorsOptions.value = await listAssessors({ limit: 500 })
   } catch (e) {
-    // ignore silently for now
     assessorsOptions.value = []
+  }
+}
+
+const loadStudents = async () => {
+  try {
+    studentsOptions.value = await listStudents({ limit: 500 })
+  } catch (e) {
+    studentsOptions.value = []
   }
 }
 
@@ -133,15 +133,6 @@ const cancelEdit = () => {
     editForm.exam_type = selectedExam.value.exam_type
     editForm.status = selectedExam.value.status
 
-    // reset assessor slots
-    editForm.assessor_slot_1 = null
-    editForm.assessor_slot_2 = null
-    if (Array.isArray(selectedExam.value.exam_assessors)) {
-      for (const ea of selectedExam.value.exam_assessors) {
-        if (ea.assessor_order === 1) editForm.assessor_slot_1 = ea.assessor.id
-        if (ea.assessor_order === 2) editForm.assessor_slot_2 = ea.assessor.id
-      }
-    }
   }
 }
 
@@ -158,14 +149,6 @@ const saveEdit = async () => {
       exam_type: editForm.exam_type,
       status: editForm.status,
     }
-
-    // build assessors array if any selected
-    const assessorsPayload = []
-    if (editForm.assessor_slot_1) assessorsPayload.push({ assessor_id: Number(editForm.assessor_slot_1), assessor_order: 1 })
-    if (editForm.assessor_slot_2) assessorsPayload.push({ assessor_id: Number(editForm.assessor_slot_2), assessor_order: 2 })
-
-    // include assessors key even if empty to clear assignments
-    payload.assessors = assessorsPayload
 
     await updateExamPlanning(selectedExam.value.id, payload)
     await loadExamPlanning()
@@ -224,8 +207,115 @@ watch(
 )
 
 onMounted(async () => {
-  await Promise.all([loadExamPlanning(), loadAssessors()])
+  await Promise.all([loadExamPlanning(), loadAssessors(), loadStudents()])
 })
+
+const linkingStudentId = ref(null)
+const studentActionLoading = ref(false)
+
+const availableStudents = computed(() => {
+  if (!selectedExam.value) return studentsOptions.value
+  const linkedIds = new Set(
+    (selectedExam.value.exam_students || []).map((es) => es.student_id)
+  )
+  return studentsOptions.value.filter((s) => !linkedIds.has(s.id))
+})
+
+const linkStudent = async () => {
+  if (!linkingStudentId.value || !selectedExam.value) return
+  studentActionLoading.value = true
+  try {
+    await createExamStudent({
+      exam_planning_id: selectedExam.value.id,
+      student_id: linkingStudentId.value,
+      phase: '',
+    })
+    linkingStudentId.value = null
+    await loadExamPlanning()
+    router.replace({ name: 'examens', query: { exam: selectedExam.value.id } })
+  } catch (e) {
+    console.error(e)
+  } finally {
+    studentActionLoading.value = false
+  }
+}
+
+const updateStudentField = async (examStudentId, field, value) => {
+  try {
+    await updateExamStudent(examStudentId, { [field]: value })
+    await loadExamPlanning()
+    if (selectedExam.value) {
+      router.replace({ name: 'examens', query: { exam: selectedExam.value.id } })
+    }
+  } catch (e) {
+    console.error(e)
+  }
+}
+
+const unlinkStudent = async (examStudentId) => {
+  studentActionLoading.value = true
+  try {
+    await deleteExamStudent(examStudentId)
+    await loadExamPlanning()
+    if (selectedExam.value) {
+      router.replace({ name: 'examens', query: { exam: selectedExam.value.id } })
+    }
+  } catch (e) {
+    console.error(e)
+  } finally {
+    studentActionLoading.value = false
+  }
+}
+
+const assessorActionLoading = ref(false)
+
+const getSlotAssessorId = (slotOrder) => {
+  if (!selectedExam.value) return null
+  const ea = (selectedExam.value.exam_assessors || []).find((ea) => ea.assessor_order === slotOrder)
+  return ea ? ea.assessor_id : null
+}
+
+const onSlotChange = async (slotOrder, event) => {
+  const newAssessorId = event.target.value ? Number(event.target.value) : null
+  if (!selectedExam.value) return
+  assessorActionLoading.value = true
+  try {
+    const current = (selectedExam.value.exam_assessors || []).find((ea) => ea.assessor_order === slotOrder)
+    if (newAssessorId) {
+      if (current) {
+        await deleteExamAssessor(current.id)
+      }
+      await createExamAssessor({
+        exam_planning_id: selectedExam.value.id,
+        assessor_id: newAssessorId,
+        assessor_order: slotOrder,
+      })
+    } else if (current) {
+      await deleteExamAssessor(current.id)
+    }
+    await loadExamPlanning()
+    router.replace({ name: 'examens', query: { exam: selectedExam.value.id } })
+  } catch (e) {
+    console.error(e)
+  } finally {
+    assessorActionLoading.value = false
+  }
+}
+
+const unlinkAssessor = async (examAssessorId) => {
+  assessorActionLoading.value = true
+  try {
+    await deleteExamAssessor(examAssessorId)
+    await loadExamPlanning()
+    if (selectedExam.value) {
+      router.replace({ name: 'examens', query: { exam: selectedExam.value.id } })
+    }
+  } catch (e) {
+    console.error(e)
+  } finally {
+    assessorActionLoading.value = false
+  }
+}
 </script>
 
 <template>
@@ -235,7 +325,7 @@ onMounted(async () => {
         <p class="eyebrow">Examens</p>
         <h1>Overzicht van geplande examens</h1>
         <p class="hero-copy">
-          Selecteer een examen uit de lijst om de detailpagina te openen. De toegewezen studentenlijst komt hier later.
+          Selecteer een examen uit de lijst om de detailpagina te openen.
         </p>
       </div>
 
@@ -345,57 +435,69 @@ onMounted(async () => {
           <div class="detail-section">
             <h3>Beoordelaars</h3>
 
-            <div v-if="!isEditing">
-              <div v-if="selectedExam.exam_assessors && selectedExam.exam_assessors.length">
-                <ul style="list-style:none; padding:0; display:flex; gap:0.75rem; flex-direction:row">
-                  <li v-for="ea in selectedExam.exam_assessors" :key="ea.id">
-                    <div style="padding:0.5rem 0.75rem; border-radius:0.6rem; background:#f8fafc; border:1px solid #e5e7eb">
-                      <div style="font-weight:600">{{ ea.assessor.name }}</div>
-                      <div style="font-size:0.85rem; color:#6b7280">{{ ea.assessor.organization || '—' }} · Slot {{ ea.assessor_order }}</div>
-                    </div>
-                  </li>
-                </ul>
-              </div>
-              <div v-else>
-                <p class="placeholder-copy">Nog geen beoordelaars toegewezen.</p>
-              </div>
-            </div>
-
-            <div v-else style="display:flex; flex-direction:column; gap:0.6rem; align-items:flex-start; width:100%">
-              <div style="display:flex; gap:0.6rem; width:100%">
-                <label style="flex:1">
-                  <span>Beoordelaar slot 1</span>
-                  <select v-model="editForm.assessor_slot_1">
-                    <option :value="null">— Geen —</option>
-                    <option v-for="a in assessorsOptions" :key="a.id" :value="a.id" :disabled="editForm.assessor_slot_2 && Number(editForm.assessor_slot_2) === a.id">
-                      {{ a.name }}{{ a.organization ? ' · ' + a.organization : '' }}
-                    </option>
-                  </select>
-                </label>
-
-                <label style="flex:1">
-                  <span>Beoordelaar slot 2</span>
-                  <select v-model="editForm.assessor_slot_2">
-                    <option :value="null">— Geen —</option>
-                    <option v-for="a in assessorsOptions" :key="a.id" :value="a.id" :disabled="editForm.assessor_slot_1 && Number(editForm.assessor_slot_1) === a.id">
-                      {{ a.name }}{{ a.organization ? ' · ' + a.organization : '' }}
-                    </option>
-                  </select>
-                </label>
-              </div>
-
-              <p v-if="saveError" class="panel-error">{{ saveError }}</p>
+            <div style="display:flex; gap:0.6rem; width:100%">
+              <label style="flex:1; display:flex; flex-direction:column; gap:0.25rem">
+                <span style="font-size:0.85rem; color:#6b7280">Slot 1</span>
+                <select style="border:1px solid #d1d5db; border-radius:0.5rem; padding:0.45rem 0.55rem; font-size:0.9rem" :value="getSlotAssessorId(1)" :disabled="assessorActionLoading" @change="onSlotChange(1, $event)">
+                  <option value="">— Geen —</option>
+                  <option v-for="a in assessorsOptions" :key="a.id" :value="a.id" :disabled="getSlotAssessorId(2) === a.id">{{ a.name }}{{ a.organization ? ' · ' + a.organization : '' }}</option>
+                </select>
+              </label>
+              <label style="flex:1; display:flex; flex-direction:column; gap:0.25rem">
+                <span style="font-size:0.85rem; color:#6b7280">Slot 2</span>
+                <select style="border:1px solid #d1d5db; border-radius:0.5rem; padding:0.45rem 0.55rem; font-size:0.9rem" :value="getSlotAssessorId(2)" :disabled="assessorActionLoading" @change="onSlotChange(2, $event)">
+                  <option value="">— Geen —</option>
+                  <option v-for="a in assessorsOptions" :key="a.id" :value="a.id" :disabled="getSlotAssessorId(1) === a.id">{{ a.name }}{{ a.organization ? ' · ' + a.organization : '' }}</option>
+                </select>
+              </label>
             </div>
           </div>
 
           <div class="detail-section">
             <h3>Toegewezen studenten</h3>
-            <p class="placeholder-copy">
-              Deze lijst wordt later toegevoegd zodra studenttoewijzingen beschikbaar zijn.
-            </p>
-            <div class="placeholder-box">
-              <span>Voorbeeld</span>
-              <p>Hier komt een lijst met studenten die aan dit examen zijn gekoppeld.</p>
+
+            <div v-if="selectedExam.exam_students && selectedExam.exam_students.length" style="overflow-x:auto">
+              <table style="width:100%; border-collapse:collapse; font-size:0.9rem">
+                <thead>
+                  <tr style="border-bottom:2px solid #e5e7eb">
+                    <th style="text-align:left; padding:0.5rem 0.75rem; color:#6b7280; font-weight:600">Naam</th>
+                    <th style="text-align:left; padding:0.5rem 0.75rem; color:#6b7280; font-weight:600">SchoolID</th>
+                    <th style="text-align:left; padding:0.5rem 0.75rem; color:#6b7280; font-weight:600">Opdracht</th>
+                    <th style="text-align:left; padding:0.5rem 0.75rem; color:#6b7280; font-weight:600">Resultaat</th>
+                    <th style="padding:0.5rem 0.75rem; width:40px"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="es in selectedExam.exam_students" :key="es.id" style="border-bottom:1px solid #f3f4f6">
+                    <td style="padding:0.5rem 0.75rem; font-weight:600">{{ es.student.name }}</td>
+                    <td style="padding:0.5rem 0.75rem; color:#6b7280">{{ es.student.student_number }}</td>
+                    <td style="padding:0.35rem 0.75rem">
+                      <div style="display:flex; align-items:center; gap:0.4rem">
+                        <span style="font-size:0.85rem; color:#374151">—</span>
+                        <button type="button" style="border:1px solid #d1d5db; border-radius:0.4rem; padding:0.25rem 0.5rem; font-size:0.8rem; background:#fff; cursor:pointer; color:#374151">Bekijken</button>
+                        <button type="button" style="border:1px solid #d1d5db; border-radius:0.4rem; padding:0.25rem 0.5rem; font-size:0.8rem; background:#fff; cursor:pointer; color:#374151; white-space:nowrap">Toewijzen</button>
+                      </div>
+                    </td>
+                    <td style="padding:0.35rem 0.75rem">
+                      <input type="text" :value="es.result || ''" @blur="updateStudentField(es.id, 'result', $event.target.value || null)" style="width:100%; min-width:80px; border:1px solid #d1d5db; border-radius:0.4rem; padding:0.35rem 0.5rem; font-size:0.85rem; background:#fff" placeholder="—" />
+                    </td>
+                    <td style="padding:0.5rem 0.75rem">
+                      <button type="button" style="border:none; background:none; cursor:pointer; font-size:1.1rem; color:#b91c1c; padding:0.25rem" :disabled="studentActionLoading" @click="unlinkStudent(es.id)">×</button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div v-else>
+              <p class="placeholder-copy">Nog geen studenten toegewezen.</p>
+            </div>
+
+            <div style="display:flex; gap:0.5rem; margin-top:0.75rem; align-items:center">
+              <select v-model="linkingStudentId" style="flex:1; border:1px solid #d1d5db; border-radius:0.5rem; padding:0.45rem 0.55rem; font-size:0.9rem">
+                <option :value="null">— Voeg student toe —</option>
+                <option v-for="s in availableStudents" :key="s.id" :value="s.id">{{ s.name }} · {{ s.student_number }}</option>
+              </select>
+              <button class="btn-secondary" type="button" style="padding:0.45rem 0.7rem; font-size:0.85rem" :disabled="!linkingStudentId || studentActionLoading" @click="linkStudent">Toevoegen</button>
             </div>
           </div>
         </div>

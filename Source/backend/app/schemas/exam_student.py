@@ -9,12 +9,12 @@ from app.schemas.student import StudentRead
 class ExamStudentCreate(BaseModel):
     exam_planning_id: int
     student_id: int
-    phase: str = Field(min_length=1, max_length=100)
+    phase: str = Field(default="", max_length=100)
     result: Optional[str] = Field(default=None, max_length=50)
 
 
 class ExamStudentUpdate(BaseModel):
-    phase: Optional[str] = Field(default=None, min_length=1, max_length=100)
+    phase: Optional[str] = Field(default=None, max_length=100)
     result: Optional[str] = Field(default=None, max_length=50)
 
 

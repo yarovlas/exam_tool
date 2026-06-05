@@ -3,8 +3,8 @@ from typing import Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.schemas.assessor import ExamAssessorRead, ExamAssessorCreate
-from app.schemas.exam_student import ExamStudentCreate, ExamStudentRead
+from app.schemas.assessor import ExamAssessorRead
+from app.schemas.exam_student import ExamStudentRead
 
 
 PlanningStatus = Literal["planned", "confirmed", "completed", "cancelled"]
@@ -17,8 +17,6 @@ class ExamPlanningCreate(BaseModel):
     room: str = Field(min_length=1, max_length=100)
     exam_time: time
     status: PlanningStatus = "planned"
-    assessors: Optional[list[ExamAssessorCreate]] = Field(default=None)
-    students: Optional[list[ExamStudentCreate]] = Field(default=None)
 
 
 class ExamPlanningUpdate(BaseModel):
@@ -27,8 +25,6 @@ class ExamPlanningUpdate(BaseModel):
     room: Optional[str] = Field(default=None, min_length=1, max_length=100)
     exam_time: Optional[time] = None
     status: Optional[PlanningStatus] = None
-    assessors: Optional[list[ExamAssessorCreate]] = None
-    students: Optional[list[ExamStudentCreate]] = None
 
 
 class ExamPlanningRead(BaseModel):
