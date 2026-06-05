@@ -24,7 +24,10 @@ class ExamPlanning(Base):
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
 
-    # Relationship
+    # Relationships
     exam_assessors: Mapped[list["ExamAssessor"]] = relationship(
         "ExamAssessor", back_populates="exam_planning", cascade="all, delete-orphan"
+    )
+    exam_students: Mapped[list["ExamStudent"]] = relationship(
+        "ExamStudent", back_populates="exam_planning", cascade="all, delete-orphan"
     )
