@@ -1,24 +1,15 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '../services/authStore'
 
-import BeoordelaarsView from '../views/BeoordelaarsView.vue'
-import DashboardView from '../views/DashboardView.vue'
-import ExamensView from '../views/ExamensView.vue'
-import OpdrachtenView from '../views/OpdrachtenView.vue'
-import StudentenView from '../views/StudentenView.vue'
-import UitloggenView from '../views/UitloggenView.vue'
-import InloggenView from '../views/InloggenView.vue'
-import WachtwoordView from '../views/WachtwoordView.vue'
-
 const routes = [
-  { path: '/', name: 'dashboard', component: DashboardView },
-  { path: '/examens', name: 'examens', component: ExamensView },
-  { path: '/studenten', name: 'studenten', component: StudentenView },
-  { path: '/beoordelaars', name: 'beoordelaars', component: BeoordelaarsView },
-  { path: '/opdrachten', name: 'opdrachten', component: OpdrachtenView },
-  { path: '/wachtwoord', name: 'wachtwoord', component: WachtwoordView },
-  { path: '/uitloggen', name: 'uitloggen', component: UitloggenView },
-  { path: '/inloggen', name: 'inloggen', component: InloggenView },
+  { path: '/', name: 'dashboard', component: () => import('../views/DashboardView.vue') },
+  { path: '/examens', name: 'examens', component: () => import('../views/ExamensView.vue') },
+  { path: '/studenten', name: 'studenten', component: () => import('../views/StudentenView.vue') },
+  { path: '/beoordelaars', name: 'beoordelaars', component: () => import('../views/BeoordelaarsView.vue') },
+  { path: '/opdrachten', name: 'opdrachten', component: () => import('../views/OpdrachtenView.vue') },
+  { path: '/wachtwoord', name: 'wachtwoord', component: () => import('../views/WachtwoordView.vue') },
+  { path: '/uitloggen', name: 'uitloggen', component: () => import('../views/UitloggenView.vue') },
+  { path: '/inloggen', name: 'inloggen', component: () => import('../views/InloggenView.vue') },
 ]
 
 const router = createRouter({
