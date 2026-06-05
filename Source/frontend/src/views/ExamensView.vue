@@ -4,6 +4,8 @@ import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { eventTypes, examStatusLabels } from '../constants/dashboard'
 import { listExamPlanning, updateExamPlanning, deleteExamPlanning } from '../services/examPlanningApi'
 import { listAssessors } from '../services/assessorsApi'
+import { listStudents } from '../services/studentsApi'
+import { createExamStudent, deleteExamStudent } from '../services/examStudentsApi'
 
 const route = useRoute()
 const router = useRouter()
@@ -69,6 +71,7 @@ const editForm = reactive({
 })
 
 const assessorsOptions = ref([])
+const studentsOptions = ref([])
 
 watch(selectedExam, (exam) => {
   isEditing.value = false
@@ -91,6 +94,7 @@ watch(selectedExam, (exam) => {
         if (ea.assessor_order === 2) editForm.assessor_slot_2 = ea.assessor.id
       }
     }
+
   }
 })
 
@@ -98,8 +102,15 @@ const loadAssessors = async () => {
   try {
     assessorsOptions.value = await listAssessors({ limit: 500 })
   } catch (e) {
-    // ignore silently for now
     assessorsOptions.value = []
+  }
+}
+
+const loadStudents = async () => {
+  try {
+    studentsOptions.value = await listStudents({ limit: 500 })
+  } catch (e) {
+    studentsOptions.value = []
   }
 }
 
@@ -142,6 +153,7 @@ const cancelEdit = () => {
         if (ea.assessor_order === 2) editForm.assessor_slot_2 = ea.assessor.id
       }
     }
+
   }
 }
 
@@ -164,7 +176,6 @@ const saveEdit = async () => {
     if (editForm.assessor_slot_1) assessorsPayload.push({ assessor_id: Number(editForm.assessor_slot_1), assessor_order: 1 })
     if (editForm.assessor_slot_2) assessorsPayload.push({ assessor_id: Number(editForm.assessor_slot_2), assessor_order: 2 })
 
-    // include assessors key even if empty to clear assignments
     payload.assessors = assessorsPayload
 
     await updateExamPlanning(selectedExam.value.id, payload)
@@ -224,8 +235,53 @@ watch(
 )
 
 onMounted(async () => {
-  await Promise.all([loadExamPlanning(), loadAssessors()])
+  await Promise.all([loadExamPlanning(), loadAssessors(), loadStudents()])
 })
+
+const linkingStudentId = ref(null)
+const studentActionLoading = ref(false)
+
+const availableStudents = computed(() => {
+  if (!selectedExam.value) return studentsOptions.value
+  const linkedIds = new Set(
+    (selectedExam.value.exam_students || []).map((es) => es.student_id)
+  )
+  return studentsOptions.value.filter((s) => !linkedIds.has(s.id))
+})
+
+const linkStudent = async () => {
+  if (!linkingStudentId.value || !selectedExam.value) return
+  studentActionLoading.value = true
+  try {
+    await createExamStudent({
+      exam_planning_id: selectedExam.value.id,
+      student_id: linkingStudentId.value,
+      phase: '',
+    })
+    linkingStudentId.value = null
+    await loadExamPlanning()
+    router.replace({ name: 'examens', query: { exam: selectedExam.value.id } })
+  } catch (e) {
+    console.error(e)
+  } finally {
+    studentActionLoading.value = false
+  }
+}
+
+const unlinkStudent = async (examStudentId) => {
+  studentActionLoading.value = true
+  try {
+    await deleteExamStudent(examStudentId)
+    await loadExamPlanning()
+    if (selectedExam.value) {
+      router.replace({ name: 'examens', query: { exam: selectedExam.value.id } })
+    }
+  } catch (e) {
+    console.error(e)
+  } finally {
+    studentActionLoading.value = false
+  }
+}
 </script>
 
 <template>
@@ -235,7 +291,7 @@ onMounted(async () => {
         <p class="eyebrow">Examens</p>
         <h1>Overzicht van geplande examens</h1>
         <p class="hero-copy">
-          Selecteer een examen uit de lijst om de detailpagina te openen. De toegewezen studentenlijst komt hier later.
+          Selecteer een examen uit de lijst om de detailpagina te openen.
         </p>
       </div>
 
@@ -390,12 +446,28 @@ onMounted(async () => {
 
           <div class="detail-section">
             <h3>Toegewezen studenten</h3>
-            <p class="placeholder-copy">
-              Deze lijst wordt later toegevoegd zodra studenttoewijzingen beschikbaar zijn.
-            </p>
-            <div class="placeholder-box">
-              <span>Voorbeeld</span>
-              <p>Hier komt een lijst met studenten die aan dit examen zijn gekoppeld.</p>
+
+            <div v-if="selectedExam.exam_students && selectedExam.exam_students.length">
+              <ul style="list-style:none; padding:0; display:flex; flex-direction:column; gap:0.5rem">
+                <li v-for="es in selectedExam.exam_students" :key="es.id" style="display:flex; justify-content:space-between; align-items:center; padding:0.5rem 0.75rem; border-radius:0.6rem; background:#f8fafc; border:1px solid #e5e7eb">
+                  <div>
+                    <div style="font-weight:600">{{ es.student.name }}</div>
+                    <div style="font-size:0.85rem; color:#6b7280">{{ es.student.student_number }}</div>
+                  </div>
+                  <button type="button" style="border:none; background:none; cursor:pointer; font-size:1.1rem; color:#b91c1c; padding:0.25rem" :disabled="studentActionLoading" @click="unlinkStudent(es.id)">×</button>
+                </li>
+              </ul>
+            </div>
+            <div v-else>
+              <p class="placeholder-copy">Nog geen studenten toegewezen.</p>
+            </div>
+
+            <div style="display:flex; gap:0.5rem; margin-top:0.75rem; align-items:center">
+              <select v-model="linkingStudentId" style="flex:1; border:1px solid #d1d5db; border-radius:0.5rem; padding:0.45rem 0.55rem; font-size:0.9rem">
+                <option :value="null">— Voeg student toe —</option>
+                <option v-for="s in availableStudents" :key="s.id" :value="s.id">{{ s.name }} · {{ s.student_number }}</option>
+              </select>
+              <button class="btn-secondary" type="button" style="padding:0.45rem 0.7rem; font-size:0.85rem" :disabled="!linkingStudentId || studentActionLoading" @click="linkStudent">Toevoegen</button>
             </div>
           </div>
         </div>
