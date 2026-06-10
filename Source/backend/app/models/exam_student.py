@@ -23,3 +23,6 @@ class ExamStudent(Base):
 
     exam_planning = relationship("ExamPlanning", back_populates="exam_students")
     student: Mapped["Student"] = relationship("Student", back_populates="exam_students")
+    assignment: Mapped[Optional["Assignment"]] = relationship(
+        "Assignment", back_populates="exam_student", cascade="all, delete-orphan", uselist=False
+    )
