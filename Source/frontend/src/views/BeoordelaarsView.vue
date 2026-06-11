@@ -180,246 +180,233 @@ const confirmDelete = async () => {
 </script>
 
 <template>
-  <main class="examens-page">
-    <section class="examens-hero">
+  <main class="mx-auto flex w-[1400px] flex-col p-3xl">
+    <section class="mb-3xl flex items-start justify-between gap-2xl">
       <div>
-        <p class="eyebrow">Beoordelaars</p>
-        <h1>Overzicht beoordelaars</h1>
-        <p class="hero-copy">Beheer beoordelaars en hun gegevens. Selecteer een beoordelaar om details te bekijken of toe te voegen.</p>
+        <p class="mb-sm text-xs uppercase tracking-[0.14em] text-text-secondary">Beoordelaars</p>
+        <h1 class="m-0 text-5xl text-text-primary">Overzicht beoordelaars</h1>
+        <p class="mt-md max-w-[60ch] text-text-secondary">Beheer beoordelaars en hun gegevens. Selecteer een beoordelaar om details te bekijken of toe te voegen.</p>
       </div>
 
-      <div class="examens-summary-card">
-        <span class="summary-label">Totaal</span>
-        <strong>{{ assessors.length }}</strong>
+      <div class="flex min-w-[180px] flex-col gap-xs rounded-3xl bg-gradient-to-br from-primary to-[#374151] px-xl py-lg text-surface">
+        <span class="text-sm text-white/75">Totaal</span>
+        <strong class="text-5xl">{{ assessors.length }}</strong>
       </div>
     </section>
 
-    <section class="examens-layout">
-      <aside class="examens-list-panel">
-        <div class="panel-header">
-          <h2>Beoordelaarslijst</h2>
-          <p>{{ loading ? 'Laden...' : `${filteredAssessors.length} beoordelaars` }}</p>
+    <section class="flex-1 grid min-h-0 gap-2xl" style="grid-template-columns: 360px 900px">
+      <aside class="flex min-h-0 flex-col rounded-3xl bg-surface p-xl shadow-card">
+        <div class="mb-lg">
+          <h2 class="m-0 text-text-primary">Beoordelaarslijst</h2>
+          <p class="mt-[0.35rem] text-base text-text-secondary">{{ loading ? 'Laden...' : `${filteredAssessors.length} beoordelaars` }}</p>
         </div>
 
-        <div class="panel-controls">
-          <select v-model="filterType" aria-label="Type beoordelaar" @change="load">
+        <div class="mb-lg grid gap-[0.6rem]" style="grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr)">
+          <select v-model="filterType" aria-label="Type beoordelaar" @change="load" class="w-full min-w-0 rounded-md border border-border bg-surface px-[0.65rem] py-[0.55rem] text-md text-text-primary">
             <option value="">Alle types</option>
             <option v-for="(label, val) in assessorTypeLabels" :key="val" :value="val">{{ label }}</option>
           </select>
-          <input v-model.trim="q" type="search" placeholder="Zoeken..." @keyup.enter="load" />
-          <button class="btn-secondary" type="button" @click="load">Zoeken</button>
-          <button class="btn-primary" type="button" @click="openCreate">Nieuw</button>
+          <input v-model.trim="q" type="search" placeholder="Zoeken..." @keyup.enter="load" class="w-full min-w-0 rounded-md border border-border bg-surface px-[0.65rem] py-[0.55rem] text-md text-text-primary" />
+          <button class="cursor-pointer whitespace-nowrap rounded-md border border-border bg-surface px-[0.8rem] py-[0.55rem] font-semibold text-primary transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-65" type="button" @click="load">Zoeken</button>
+          <button class="cursor-pointer whitespace-nowrap rounded-md border border-primary bg-primary px-[0.8rem] py-[0.55rem] font-semibold text-surface transition-colors hover:border-primary-hover hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-65" type="button" @click="openCreate">Nieuw</button>
         </div>
 
-        <p v-if="error" class="panel-error">{{ error }}</p>
-        <p v-else-if="loading" class="panel-error">Laden...</p>
+        <p v-if="error" class="mt-[0.35rem] text-base text-error">{{ error }}</p>
+        <p v-else-if="loading" class="mt-[0.35rem] text-base text-error">Laden...</p>
 
-        <div v-else class="examens-list">
-          <p v-if="filteredAssessors.length === 0" class="panel-error">Geen beoordelaars gevonden</p>
+        <div v-else class="flex flex-1 flex-col gap-md overflow-y-auto" style="max-height: calc(100vh - 400px)">
+          <p v-if="filteredAssessors.length === 0" class="mt-[0.35rem] text-base text-error">Geen beoordelaars gevonden</p>
 
           <button
             v-for="a in filteredAssessors"
             :key="a.id"
-            class="exam-card assessor-card"
-            :class="{ active: a.id === selectedId && !isCreating }"
+            class="block w-full rounded-2xl border border-border-light bg-surface px-lg py-lg text-left text-inherit no-underline transition-all duration-200 hover:border-[#9ca3af] hover:shadow-hover"
+            :class="{ 'border-[#9ca3af] shadow-hover': a.id === selectedId && !isCreating }"
             type="button"
             @click="selectedId = a.id; isCreating = false"
           >
-            <div class="exam-card-top">
-              <span class="exam-card-date">{{ a.organization || 'Geen organisatie' }}</span>
-              <span class="exam-card-status" :style="getAssessorBadgeStyle(a.assessor_type)">{{ getAssessorTypeLabel(a.assessor_type) }}</span>
+            <div class="mb-[0.65rem] flex justify-between gap-lg">
+              <span class="text-base text-text-secondary">{{ a.organization || 'Geen organisatie' }}</span>
+              <span class="inline-flex items-center justify-center rounded-full px-[0.6rem] py-[0.2rem] text-xs capitalize" :style="getAssessorBadgeStyle(a.assessor_type)">{{ getAssessorTypeLabel(a.assessor_type) }}</span>
             </div>
 
-            <h3>{{ a.name }}</h3>
-            <p class="exam-card-meta">{{ a.email || 'Geen e-mail' }}</p>
+            <h3 class="m-0 text-lg text-text-primary">{{ a.name }}</h3>
+            <p class="m-0 mt-[0.35rem] text-base text-text-secondary">{{ a.email || 'Geen e-mail' }}</p>
           </button>
         </div>
       </aside>
 
-      <section class="examens-detail-panel">
-        <div v-if="isCreating" class="detail-card">
-          <div class="detail-header">
+      <section class="rounded-3xl bg-surface shadow-card" :class="selected || isCreating ? 'p-2xl' : 'p-2xl'">
+        <div v-if="isCreating" class="flex flex-col gap-2xl">
+          <div class="mb-xl flex items-start justify-between gap-lg">
             <div>
-              <p class="eyebrow">Nieuwe beoordelaar</p>
-              <h2>Beoordelaar toevoegen</h2>
+              <p class="mb-sm text-xs uppercase tracking-[0.14em] text-text-secondary">Nieuwe beoordelaar</p>
+              <h2 class="m-0 text-4xl text-text-primary">Beoordelaar toevoegen</h2>
             </div>
 
-            <div class="detail-actions">
-              <div class="actions">
-                <button class="btn-secondary" type="button" @click="cancelCreate">Annuleren</button>
-                <button class="btn-primary" type="button" @click="submitCreate" :disabled="saveLoading">{{ saveLoading ? 'Opslaan...' : 'Opslaan' }}</button>
+            <div class="flex items-center gap-md">
+              <div class="flex items-center gap-sm">
+                <button class="cursor-pointer whitespace-nowrap rounded-md border border-border bg-surface px-[0.8rem] py-[0.55rem] font-semibold text-primary transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-65" type="button" @click="cancelCreate">Annuleren</button>
+                <button class="cursor-pointer whitespace-nowrap rounded-md border border-primary bg-primary px-[0.8rem] py-[0.55rem] font-semibold text-surface transition-colors hover:border-primary-hover hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-65" type="button" @click="submitCreate" :disabled="saveLoading">{{ saveLoading ? 'Opslaan...' : 'Opslaan' }}</button>
               </div>
             </div>
           </div>
 
-          <div class="edit-form">
-            <label>
-              <span>Type</span>
-              <select v-model="createForm.assessor_type">
+          <div class="grid grid-cols-2 gap-lg">
+            <label class="flex flex-col gap-xs">
+              <span class="text-base text-text-secondary">Type</span>
+              <select v-model="createForm.assessor_type" class="w-full min-w-0 rounded-md border border-border bg-surface px-[0.65rem] py-[0.55rem] text-md text-text-primary">
                 <option v-for="(label, val) in assessorTypeLabels" :key="val" :value="val">{{ label }}</option>
               </select>
             </label>
 
-            <label>
-              <span>Naam</span>
-              <input v-model.trim="createForm.name" type="text" />
+            <label class="flex flex-col gap-xs">
+              <span class="text-base text-text-secondary">Naam</span>
+              <input v-model.trim="createForm.name" type="text" class="w-full min-w-0 rounded-md border border-border bg-surface px-[0.65rem] py-[0.55rem] text-md text-text-primary" />
             </label>
 
-            <label>
-              <span>Organisatie</span>
-              <input v-model.trim="createForm.organization" type="text" />
+            <label class="flex flex-col gap-xs">
+              <span class="text-base text-text-secondary">Organisatie</span>
+              <input v-model.trim="createForm.organization" type="text" class="w-full min-w-0 rounded-md border border-border bg-surface px-[0.65rem] py-[0.55rem] text-md text-text-primary" />
             </label>
 
-            <label>
-              <span>Email</span>
-              <input v-model.trim="createForm.email" type="email" />
+            <label class="flex flex-col gap-xs">
+              <span class="text-base text-text-secondary">Email</span>
+              <input v-model.trim="createForm.email" type="email" class="w-full min-w-0 rounded-md border border-border bg-surface px-[0.65rem] py-[0.55rem] text-md text-text-primary" />
             </label>
 
-            <label>
-              <span>Telefoon</span>
-              <input v-model.trim="createForm.phone" type="tel" />
+            <label class="flex flex-col gap-xs">
+              <span class="text-base text-text-secondary">Telefoon</span>
+              <input v-model.trim="createForm.phone" type="tel" class="w-full min-w-0 rounded-md border border-border bg-surface px-[0.65rem] py-[0.55rem] text-md text-text-primary" />
             </label>
 
-            <label>
-              <span>Adres</span>
-              <input v-model.trim="createForm.address" type="text" />
+            <label class="flex flex-col gap-xs">
+              <span class="text-base text-text-secondary">Adres</span>
+              <input v-model.trim="createForm.address" type="text" class="w-full min-w-0 rounded-md border border-border bg-surface px-[0.65rem] py-[0.55rem] text-md text-text-primary" />
             </label>
 
-            <label>
-              <span>Postcode / Plaats</span>
-              <input v-model.trim="createForm.postal_city" type="text" />
+            <label class="flex flex-col gap-xs">
+              <span class="text-base text-text-secondary">Postcode / Plaats</span>
+              <input v-model.trim="createForm.postal_city" type="text" class="w-full min-w-0 rounded-md border border-border bg-surface px-[0.65rem] py-[0.55rem] text-md text-text-primary" />
             </label>
 
-            <label>
-              <span>Aanspreking</span>
-              <input v-model.trim="createForm.salutation" type="text" />
+            <label class="flex flex-col gap-xs">
+              <span class="text-base text-text-secondary">Aanspreking</span>
+              <input v-model.trim="createForm.salutation" type="text" class="w-full min-w-0 rounded-md border border-border bg-surface px-[0.65rem] py-[0.55rem] text-md text-text-primary" />
             </label>
 
-            <label>
-              <span>Recruitment status</span>
-              <input v-model.trim="createForm.recruitment_status" type="text" />
+            <label class="flex flex-col gap-xs">
+              <span class="text-base text-text-secondary">Recruitment status</span>
+              <input v-model.trim="createForm.recruitment_status" type="text" class="w-full min-w-0 rounded-md border border-border bg-surface px-[0.65rem] py-[0.55rem] text-md text-text-primary" />
             </label>
           </div>
         </div>
 
-        <div v-else-if="selected" class="detail-card">
-          <div class="detail-header">
+        <div v-else-if="selected" class="flex flex-col gap-2xl">
+          <div class="mb-xl flex items-start justify-between gap-lg">
             <div>
-              <p class="eyebrow">Detailweergave</p>
-              <h2>{{ selected.name }}</h2>
-              <p class="detail-meta">{{ getAssessorTypeLabel(selected.assessor_type) }} · {{ selected.organization || 'Geen organisatie' }}</p>
+              <p class="mb-sm text-xs uppercase tracking-[0.14em] text-text-secondary">Detailweergave</p>
+              <h2 class="m-0 text-4xl text-text-primary">{{ selected.name }}</h2>
+              <p class="mt-[0.35rem] text-base text-text-secondary">{{ getAssessorTypeLabel(selected.assessor_type) }} · {{ selected.organization || 'Geen organisatie' }}</p>
             </div>
 
-            <div class="detail-actions">
-              <span class="detail-status" v-if="!isEditing" :style="getAssessorBadgeStyle(selected.assessor_type)">{{ getAssessorTypeLabel(selected.assessor_type) }}</span>
+            <div class="flex items-center gap-md">
+              <span v-if="!isEditing" class="inline-flex items-center justify-center rounded-full px-[0.6rem] py-[0.2rem] text-xs capitalize" :style="getAssessorBadgeStyle(selected.assessor_type)">{{ getAssessorTypeLabel(selected.assessor_type) }}</span>
 
-              <div class="actions">
-                <button class="btn-secondary" v-if="!isEditing" type="button" @click="startEdit">Bewerken</button>
-                <button class="btn-secondary" v-if="!isEditing" type="button" @click="confirmDelete" :disabled="deleteLoading">{{ deleteLoading ? 'Verwijderen...' : 'Verwijderen' }}</button>
+              <div class="flex items-center gap-sm">
+                <button class="cursor-pointer whitespace-nowrap rounded-md border border-border bg-surface px-[0.8rem] py-[0.55rem] font-semibold text-primary transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-65" v-if="!isEditing" type="button" @click="startEdit">Bewerken</button>
+                <button class="cursor-pointer whitespace-nowrap rounded-md border border-border bg-surface px-[0.8rem] py-[0.55rem] font-semibold text-primary transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-65" v-if="!isEditing" type="button" @click="confirmDelete" :disabled="deleteLoading">{{ deleteLoading ? 'Verwijderen...' : 'Verwijderen' }}</button>
 
-                <button class="btn-secondary" v-if="isEditing" type="button" @click="cancelEdit">Annuleren</button>
-                <button class="btn-primary" v-if="isEditing" type="button" @click="submitEdit" :disabled="saveLoading">{{ saveLoading ? 'Opslaan...' : 'Opslaan' }}</button>
+                <button class="cursor-pointer whitespace-nowrap rounded-md border border-border bg-surface px-[0.8rem] py-[0.55rem] font-semibold text-primary transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-65" v-if="isEditing" type="button" @click="cancelEdit">Annuleren</button>
+                <button class="cursor-pointer whitespace-nowrap rounded-md border border-primary bg-primary px-[0.8rem] py-[0.55rem] font-semibold text-surface transition-colors hover:border-primary-hover hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-65" v-if="isEditing" type="button" @click="submitEdit" :disabled="saveLoading">{{ saveLoading ? 'Opslaan...' : 'Opslaan' }}</button>
               </div>
             </div>
           </div>
 
           <div>
-            <div v-if="!isEditing" class="detail-grid">
-              <div class="detail-item">
-                <span>Email</span>
-                <strong>{{ selected.email || '—' }}</strong>
+            <div v-if="!isEditing" class="grid grid-cols-2 gap-lg">
+              <div class="flex flex-col gap-[0.35rem] rounded-xl border border-border-light bg-detail-bg px-lg py-[0.95rem]">
+                <span class="text-base text-text-secondary">Email</span>
+                <strong class="text-lg text-text-primary">{{ selected.email || '—' }}</strong>
               </div>
-              <div class="detail-item">
-                <span>Telefoon</span>
-                <strong>{{ selected.phone || '—' }}</strong>
+              <div class="flex flex-col gap-[0.35rem] rounded-xl border border-border-light bg-detail-bg px-lg py-[0.95rem]">
+                <span class="text-base text-text-secondary">Telefoon</span>
+                <strong class="text-lg text-text-primary">{{ selected.phone || '—' }}</strong>
               </div>
-              <div class="detail-item">
-                <span>Adres</span>
-                <strong>{{ selected.address || '—' }}</strong>
+              <div class="flex flex-col gap-[0.35rem] rounded-xl border border-border-light bg-detail-bg px-lg py-[0.95rem]">
+                <span class="text-base text-text-secondary">Adres</span>
+                <strong class="text-lg text-text-primary">{{ selected.address || '—' }}</strong>
               </div>
-              <div class="detail-item">
-                <span>Postcode / Plaats</span>
-                <strong>{{ selected.postal_city || '—' }}</strong>
+              <div class="flex flex-col gap-[0.35rem] rounded-xl border border-border-light bg-detail-bg px-lg py-[0.95rem]">
+                <span class="text-base text-text-secondary">Postcode / Plaats</span>
+                <strong class="text-lg text-text-primary">{{ selected.postal_city || '—' }}</strong>
               </div>
-              <div class="detail-item">
-                <span>Aanspreking</span>
-                <strong>{{ selected.salutation || '—' }}</strong>
+              <div class="flex flex-col gap-[0.35rem] rounded-xl border border-border-light bg-detail-bg px-lg py-[0.95rem]">
+                <span class="text-base text-text-secondary">Aanspreking</span>
+                <strong class="text-lg text-text-primary">{{ selected.salutation || '—' }}</strong>
               </div>
-              <div class="detail-item">
-                <span>Recruitment</span>
-                <strong>{{ selected.recruitment_status || '—' }}</strong>
+              <div class="flex flex-col gap-[0.35rem] rounded-xl border border-border-light bg-detail-bg px-lg py-[0.95rem]">
+                <span class="text-base text-text-secondary">Recruitment</span>
+                <strong class="text-lg text-text-primary">{{ selected.recruitment_status || '—' }}</strong>
               </div>
             </div>
 
-            <div v-else class="edit-form">
-              <label>
-                <span>Type</span>
-                <select v-model="editForm.assessor_type">
+            <div v-else class="grid grid-cols-2 gap-lg">
+              <label class="flex flex-col gap-xs">
+                <span class="text-base text-text-secondary">Type</span>
+                <select v-model="editForm.assessor_type" class="w-full min-w-0 rounded-md border border-border bg-surface px-[0.65rem] py-[0.55rem] text-md text-text-primary">
                   <option v-for="(label, val) in assessorTypeLabels" :key="val" :value="val">{{ label }}</option>
                 </select>
               </label>
 
-              <label>
-                <span>Naam</span>
-                <input v-model.trim="editForm.name" type="text" />
+              <label class="flex flex-col gap-xs">
+                <span class="text-base text-text-secondary">Naam</span>
+                <input v-model.trim="editForm.name" type="text" class="w-full min-w-0 rounded-md border border-border bg-surface px-[0.65rem] py-[0.55rem] text-md text-text-primary" />
               </label>
 
-              <label>
-                <span>Organisatie</span>
-                <input v-model.trim="editForm.organization" type="text" />
+              <label class="flex flex-col gap-xs">
+                <span class="text-base text-text-secondary">Organisatie</span>
+                <input v-model.trim="editForm.organization" type="text" class="w-full min-w-0 rounded-md border border-border bg-surface px-[0.65rem] py-[0.55rem] text-md text-text-primary" />
               </label>
 
-              <label>
-                <span>Email</span>
-                <input v-model.trim="editForm.email" type="email" />
+              <label class="flex flex-col gap-xs">
+                <span class="text-base text-text-secondary">Email</span>
+                <input v-model.trim="editForm.email" type="email" class="w-full min-w-0 rounded-md border border-border bg-surface px-[0.65rem] py-[0.55rem] text-md text-text-primary" />
               </label>
 
-              <label>
-                <span>Telefoon</span>
-                <input v-model.trim="editForm.phone" type="tel" />
+              <label class="flex flex-col gap-xs">
+                <span class="text-base text-text-secondary">Telefoon</span>
+                <input v-model.trim="editForm.phone" type="tel" class="w-full min-w-0 rounded-md border border-border bg-surface px-[0.65rem] py-[0.55rem] text-md text-text-primary" />
               </label>
 
-              <label>
-                <span>Adres</span>
-                <input v-model.trim="editForm.address" type="text" />
+              <label class="flex flex-col gap-xs">
+                <span class="text-base text-text-secondary">Adres</span>
+                <input v-model.trim="editForm.address" type="text" class="w-full min-w-0 rounded-md border border-border bg-surface px-[0.65rem] py-[0.55rem] text-md text-text-primary" />
               </label>
 
-              <label>
-                <span>Postcode / Plaats</span>
-                <input v-model.trim="editForm.postal_city" type="text" />
+              <label class="flex flex-col gap-xs">
+                <span class="text-base text-text-secondary">Postcode / Plaats</span>
+                <input v-model.trim="editForm.postal_city" type="text" class="w-full min-w-0 rounded-md border border-border bg-surface px-[0.65rem] py-[0.55rem] text-md text-text-primary" />
               </label>
 
-              <label>
-                <span>Aanspreking</span>
-                <input v-model.trim="editForm.salutation" type="text" />
+              <label class="flex flex-col gap-xs">
+                <span class="text-base text-text-secondary">Aanspreking</span>
+                <input v-model.trim="editForm.salutation" type="text" class="w-full min-w-0 rounded-md border border-border bg-surface px-[0.65rem] py-[0.55rem] text-md text-text-primary" />
               </label>
 
-              <label>
-                <span>Recruitment status</span>
-                <input v-model.trim="editForm.recruitment_status" type="text" />
+              <label class="flex flex-col gap-xs">
+                <span class="text-base text-text-secondary">Recruitment status</span>
+                <input v-model.trim="editForm.recruitment_status" type="text" class="w-full min-w-0 rounded-md border border-border bg-surface px-[0.65rem] py-[0.55rem] text-md text-text-primary" />
               </label>
             </div>
           </div>
         </div>
 
-        <div v-else class="detail-empty">
-          <h2>Kies een beoordelaar</h2>
-          <p>Selecteer links een beoordelaar om de details te bekijken.</p>
+        <div v-else class="flex min-h-[420px] flex-col items-start justify-center p-2xl">
+          <h2 class="m-0 text-5xl text-text-primary">Kies een beoordelaar</h2>
+          <p class="mt-md text-text-muted">Selecteer links een beoordelaar om de details te bekijken.</p>
         </div>
       </section>
     </section>
   </main>
 </template>
-
-<style scoped>
-.panel-controls {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
-  gap: 0.6rem;
-  margin-bottom: 1rem;
-}
-
-.examens-list {
-  max-height: calc(100vh - 400px);
-}
-</style>

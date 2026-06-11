@@ -43,30 +43,29 @@ const submitLogin = async () => {
 </script>
 
 <template>
-  <main class="main-content">
-    <div class="login-layout">
-      <section class="login-card">
-        <div class="login-header">
-          <h1>Inloggen</h1>
+  <main class="mx-auto w-[1400px] px-3xl">
+    <div class="flex min-h-[calc(100vh-120px)] items-center justify-center">
+      <section class="w-full max-w-[420px] rounded-lg bg-surface p-3xl shadow-sidebar">
+        <div class="mb-3xl">
+          <h1 class="text-5xl text-heading">Inloggen</h1>
         </div>
 
-        <form class="login-form" @submit.prevent="submitLogin">
-          <label class="login-field">
-            <span>Email</span>
-            <input v-model="email" type="email"/>
+        <form class="flex flex-col gap-lg" @submit.prevent="submitLogin">
+          <label class="flex flex-col gap-[0.4rem]">
+            <span class="text-sm font-semibold text-gray-700">Email</span>
+            <input v-model="email" type="email" class="w-full min-w-0 rounded-md border border-border bg-surface px-[0.75rem] py-[0.7rem] text-md focus:border-brand focus:outline-none" />
           </label>
 
-          <label class="login-field">
-            <span>Wachtwoord</span>
-
-            <input v-model="password" type="password"/>
+          <label class="flex flex-col gap-[0.4rem]">
+            <span class="text-sm font-semibold text-gray-700">Wachtwoord</span>
+            <input v-model="password" type="password" class="w-full min-w-0 rounded-md border border-border bg-surface px-[0.75rem] py-[0.7rem] text-md focus:border-brand focus:outline-none" />
           </label>
 
-          <p v-if="loginError" class="login-error">
+          <p v-if="loginError" class="text-sm text-error">
             {{ loginError }}
           </p>
 
-          <button type="submit" class="btn-primary">
+          <button type="submit" class="mt-lg cursor-pointer whitespace-nowrap rounded-md border border-primary bg-primary px-[0.8rem] py-[0.55rem] font-semibold text-surface transition-colors hover:border-primary-hover hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-65">
             {{ loginLoading ? 'Bezig...' : 'Inloggen' }}
           </button>
         </form>
@@ -74,10 +73,3 @@ const submitLogin = async () => {
     </div>
   </main>
 </template>
-
-<style scoped>
-.login-header p {
-  color: #666;
-  font-size: 0.95rem;
-}
-</style>

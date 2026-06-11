@@ -1,4 +1,6 @@
-:root {
+@import "tailwindcss";
+
+@theme {
   --color-primary: #111827;
   --color-primary-hover: #1f2937;
   --color-brand: #7c3aed;
@@ -20,7 +22,8 @@
   --color-badge-text: #4338ca;
   --color-detail-bg: #f9fafb;
 
-  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+  --font-family-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+
   --font-size-xs: 0.75rem;
   --font-size-sm: 0.85rem;
   --font-size-base: 0.9rem;
@@ -53,4 +56,28 @@
   --shadow-sidebar: 0 1px 3px rgba(0, 0, 0, 0.1);
 
   --max-width: 1400px;
+}
+
+@layer base {
+  html,
+  body,
+  #app {
+    min-height: 100%;
+  }
+
+  body {
+    min-height: 100vh;
+    background: var(--color-bg);
+    font-family: var(--font-family-sans);
+  }
+
+  #app {
+    min-height: 100vh;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
 }
