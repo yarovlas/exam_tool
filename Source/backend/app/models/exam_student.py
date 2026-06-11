@@ -16,10 +16,13 @@ class ExamStudent(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     exam_planning_id: Mapped[int] = mapped_column(ForeignKey("exam_planning.id", ondelete="CASCADE"))
     student_id: Mapped[int] = mapped_column(ForeignKey("students.id", ondelete="CASCADE"))
-    phase: Mapped[str] = mapped_column(String(100), nullable=False)
+    phase: Mapped[Optional[str]] = mapped_column(String(100), nullable=True, default=None)
     result: Mapped[Optional[str]] = mapped_column(String(50))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     exam_planning = relationship("ExamPlanning", back_populates="exam_students")
     student: Mapped["Student"] = relationship("Student", back_populates="exam_students")
+    assignment: Mapped[Optional["Assignment"]] = relationship(
+        "Assignment", back_populates="exam_student", cascade="all, delete-orphan", uselist=False
+    )

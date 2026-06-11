@@ -17,7 +17,7 @@ def create_exam_student(payload: ExamStudentCreate, db: Session = Depends(get_db
     exam_student = ExamStudent(
         exam_planning_id=payload.exam_planning_id,
         student_id=payload.student_id,
-        phase=payload.phase,
+        phase=payload.phase,  # None = gebruik student.phase als fallback
         result=payload.result,
     )
 
