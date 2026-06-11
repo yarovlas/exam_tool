@@ -49,33 +49,33 @@ const submit = async () => {
 </script>
 
 <template>
-  <main class="main-content">
-    <div class="login-layout">
-      <section class="login-card">
-        <div class="login-header">
-          <h1>Wachtwoord wijzigen</h1>
+  <main class="mx-auto w-[1400px] px-3xl">
+    <div class="flex min-h-[calc(100vh-120px)] items-center justify-center">
+      <section class="w-full max-w-[420px] rounded-lg bg-surface p-3xl shadow-sidebar">
+        <div class="mb-3xl">
+          <h1 class="text-5xl text-heading">Wachtwoord wijzigen</h1>
         </div>
 
-        <form class="login-form" @submit.prevent="submit">
-          <label class="login-field">
-            <span>Huidig wachtwoord</span>
-            <input v-model="currentPassword" type="password" />
+        <form class="flex flex-col gap-lg" @submit.prevent="submit">
+          <label class="flex flex-col gap-[0.4rem]">
+            <span class="text-sm font-semibold text-gray-700">Huidig wachtwoord</span>
+            <input v-model="currentPassword" type="password" class="w-full min-w-0 rounded-md border border-border bg-surface px-[0.75rem] py-[0.7rem] text-md focus:border-brand focus:outline-none" />
           </label>
 
-          <label class="login-field">
-            <span>Nieuw wachtwoord</span>
-            <input v-model="newPassword" type="password" />
+          <label class="flex flex-col gap-[0.4rem]">
+            <span class="text-sm font-semibold text-gray-700">Nieuw wachtwoord</span>
+            <input v-model="newPassword" type="password" class="w-full min-w-0 rounded-md border border-border bg-surface px-[0.75rem] py-[0.7rem] text-md focus:border-brand focus:outline-none" />
           </label>
 
-          <label class="login-field">
-            <span>Nieuw wachtwoord bevestigen</span>
-            <input v-model="newPasswordConfirm" type="password" />
+          <label class="flex flex-col gap-[0.4rem]">
+            <span class="text-sm font-semibold text-gray-700">Nieuw wachtwoord bevestigen</span>
+            <input v-model="newPasswordConfirm" type="password" class="w-full min-w-0 rounded-md border border-border bg-surface px-[0.75rem] py-[0.7rem] text-md focus:border-brand focus:outline-none" />
           </label>
 
-          <p v-if="error" class="login-error">{{ error }}</p>
-          <p v-if="success" class="login-success">{{ success }}</p>
+          <p v-if="error" class="text-sm text-error">{{ error }}</p>
+          <p v-if="success" class="text-sm text-success">{{ success }}</p>
 
-          <button type="submit" class="btn-primary" :disabled="loading">
+          <button type="submit" class="mt-lg cursor-pointer whitespace-nowrap rounded-md border border-primary bg-primary px-[0.8rem] py-[0.55rem] font-semibold text-surface transition-colors hover:border-primary-hover hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-65" :disabled="loading">
             {{ loading ? 'Bezig...' : 'Wijzigen' }}
           </button>
         </form>
@@ -83,5 +83,3 @@ const submit = async () => {
     </div>
   </main>
 </template>
-
-<style scoped></style>

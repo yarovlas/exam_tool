@@ -14,7 +14,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <main class="main-content">
+  <main class="mx-auto w-[1400px] px-3xl">
     <p>U wordt uitgelogd...</p>
   </main>
 </template>

@@ -175,34 +175,34 @@ const submitForm = () => {
 </script>
 
 <template>
-  <div v-if="isOpen" class="context-window-backdrop" @click.self="emit('close')">
-    <aside class="context-window" role="dialog" aria-modal="true" aria-label="Nieuw examen">
-      <div class="context-window-header">
-        <h2>Nieuw examen</h2>
-        <button class="context-window-close" type="button" @click="emit('close')">×</button>
+  <div v-if="isOpen" class="fixed inset-0 z-200 flex justify-end bg-[rgba(17,24,39,0.45)]" @click.self="emit('close')">
+    <aside class="h-full w-[min(100%,440px)] overflow-y-auto bg-surface p-3xl shadow-[-8px_0_28px_rgba(15,23,42,0.18)]" role="dialog" aria-modal="true" aria-label="Nieuw examen">
+      <div class="mb-md flex items-center justify-between">
+        <h2 class="text-2xl text-heading">Nieuw examen</h2>
+        <button class="h-8 w-8 cursor-pointer rounded-full border-none bg-gray-100 text-xl leading-none text-gray-800" type="button" @click="emit('close')">×</button>
       </div>
 
-      <p class="context-window-hint">{{ modeText }}</p>
+      <p class="mb-lg text-base text-text-secondary">{{ modeText }}</p>
 
-      <form class="context-window-form" @submit.prevent="submitForm">
-        <label>
-          <span>Datum</span>
-          <input type="date" :value="form.examDate" required @input="updateDate" />
+      <form class="flex flex-col gap-lg" @submit.prevent="submitForm">
+        <label class="flex flex-col gap-[0.4rem]">
+          <span class="text-sm font-semibold text-gray-700">Datum</span>
+          <input type="date" :value="form.examDate" required @input="updateDate" class="w-full min-w-0 rounded-md border border-border bg-surface px-[0.75rem] py-[0.65rem] text-md" />
         </label>
 
-        <label>
-          <span>Tijd</span>
-          <input v-model="form.examTime" type="time" step="60" required />
+        <label class="flex flex-col gap-[0.4rem]">
+          <span class="text-sm font-semibold text-gray-700">Tijd</span>
+          <input v-model="form.examTime" type="time" step="60" required class="w-full min-w-0 rounded-md border border-border bg-surface px-[0.75rem] py-[0.65rem] text-md" />
         </label>
 
-        <label>
-          <span>Locatie</span>
-          <input v-model.trim="form.room" type="text" maxlength="100" placeholder="Bijv. Lokaal B-204" required />
+        <label class="flex flex-col gap-[0.4rem]">
+          <span class="text-sm font-semibold text-gray-700">Locatie</span>
+          <input v-model.trim="form.room" type="text" maxlength="100" placeholder="Bijv. Lokaal B-204" required class="w-full min-w-0 rounded-md border border-border bg-surface px-[0.75rem] py-[0.65rem] text-md" />
         </label>
 
-        <label>
-          <span>Examentype</span>
-          <select v-model="form.examType" required>
+        <label class="flex flex-col gap-[0.4rem]">
+          <span class="text-sm font-semibold text-gray-700">Examentype</span>
+          <select v-model="form.examType" required class="w-full min-w-0 rounded-md border border-border bg-surface px-[0.75rem] py-[0.65rem] text-md">
             <option value="practical">Praktijk</option>
             <option value="avo">AVO</option>
             <option value="keuzedeel">Keuzedeel</option>
@@ -210,9 +210,9 @@ const submitForm = () => {
           </select>
         </label>
 
-        <label>
-          <span>Beoordelaar slot 1</span>
-          <select v-model="form.assessor_slot_1">
+        <label class="flex flex-col gap-[0.4rem]">
+          <span class="text-sm font-semibold text-gray-700">Beoordelaar slot 1</span>
+          <select v-model="form.assessor_slot_1" class="w-full min-w-0 rounded-md border border-border bg-surface px-[0.75rem] py-[0.65rem] text-md">
             <option :value="null">— Geen —</option>
             <option v-for="a in assessorsOptions" :key="a.id" :value="a.id" :disabled="form.assessor_slot_2 && Number(form.assessor_slot_2) === a.id">
               {{ a.name }}{{ a.organization ? ' · ' + a.organization : '' }}
@@ -220,9 +220,9 @@ const submitForm = () => {
           </select>
         </label>
 
-        <label>
-          <span>Beoordelaar slot 2</span>
-          <select v-model="form.assessor_slot_2">
+        <label class="flex flex-col gap-[0.4rem]">
+          <span class="text-sm font-semibold text-gray-700">Beoordelaar slot 2</span>
+          <select v-model="form.assessor_slot_2" class="w-full min-w-0 rounded-md border border-border bg-surface px-[0.75rem] py-[0.65rem] text-md">
             <option :value="null">— Geen —</option>
             <option v-for="a in assessorsOptions" :key="a.id" :value="a.id" :disabled="form.assessor_slot_1 && Number(form.assessor_slot_1) === a.id">
               {{ a.name }}{{ a.organization ? ' · ' + a.organization : '' }}
@@ -230,12 +230,12 @@ const submitForm = () => {
           </select>
         </label>
 
-        <p v-if="localError" class="context-window-error">{{ localError }}</p>
-        <p v-else-if="submitError" class="context-window-error">{{ submitError }}</p>
+        <p v-if="localError" class="text-sm text-error">{{ localError }}</p>
+        <p v-else-if="submitError" class="text-sm text-error">{{ submitError }}</p>
 
-        <div class="context-window-actions">
-          <button class="btn-secondary" type="button" @click="emit('close')">Annuleren</button>
-          <button class="btn-primary" type="submit" :disabled="isSaving">
+        <div class="mt-xs flex justify-end gap-md">
+          <button class="cursor-pointer whitespace-nowrap rounded-md border border-border bg-surface px-[0.8rem] py-[0.55rem] font-semibold text-primary transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-65" type="button" @click="emit('close')">Annuleren</button>
+          <button class="cursor-pointer whitespace-nowrap rounded-md border border-primary bg-primary px-[0.8rem] py-[0.55rem] font-semibold text-surface transition-colors hover:border-primary-hover hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-65" type="submit" :disabled="isSaving">
             {{ isSaving ? 'Opslaan...' : 'Opslaan' }}
           </button>
         </div>

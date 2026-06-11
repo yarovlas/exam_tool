@@ -362,133 +362,133 @@ const unlinkAssessor = async (examAssessorId) => {
 </script>
 
 <template>
-  <main class="examens-page">
-    <section class="examens-hero">
+  <main class="mx-auto flex w-[1400px] flex-col p-3xl">
+    <section class="mb-3xl flex items-start justify-between gap-2xl">
       <div>
-        <p class="eyebrow">Examens</p>
-        <h1>Overzicht van geplande examens</h1>
-        <p class="hero-copy">
+        <p class="mb-sm text-xs uppercase tracking-[0.14em] text-text-secondary">Examens</p>
+        <h1 class="m-0 text-5xl text-text-primary">Overzicht van geplande examens</h1>
+        <p class="mt-md max-w-[60ch] text-text-secondary">
           Selecteer een examen uit de lijst om de detailpagina te openen.
         </p>
       </div>
 
-      <div class="examens-summary-card">
-        <span class="summary-label">Totaal gepland</span>
-        <strong>{{ examPlanningItems.length }}</strong>
+      <div class="flex min-w-[180px] flex-col gap-xs rounded-3xl bg-gradient-to-br from-primary to-[#374151] px-xl py-lg text-surface">
+        <span class="text-sm text-white/75">Totaal gepland</span>
+        <strong class="text-5xl">{{ examPlanningItems.length }}</strong>
       </div>
     </section>
 
-    <section class="examens-layout">
-      <aside class="examens-list-panel">
-        <div class="panel-header">
-          <h2>Examenlijst</h2>
-          <p>{{ examPlanningLoading ? 'Laden...' : `${examPlanningItems.length} examens` }}</p>
+    <section class="flex-1 grid min-h-0 gap-2xl" style="grid-template-columns: 360px 900px">
+      <aside class="flex min-h-0 flex-col rounded-3xl bg-surface p-xl shadow-card">
+        <div class="mb-lg">
+          <h2 class="m-0 text-text-primary">Examenlijst</h2>
+          <p class="mt-[0.35rem] text-base text-text-secondary">{{ examPlanningLoading ? 'Laden...' : `${examPlanningItems.length} examens` }}</p>
         </div>
 
-        <p v-if="examPlanningError" class="panel-error">{{ examPlanningError }}</p>
+        <p v-if="examPlanningError" class="mt-[0.35rem] text-base text-error">{{ examPlanningError }}</p>
 
-        <div v-else class="examens-list">
+        <div v-else class="flex flex-1 flex-col gap-md overflow-y-auto min-h-0 pt-px" style="max-height: calc(100vh - 300px)">
           <RouterLink
             v-for="exam in examPlanningItems"
             :key="exam.id"
-            class="exam-card"
-            :class="{ active: exam.id === selectedExamId }"
+            class="block w-full rounded-2xl border border-border-light bg-surface px-lg py-lg text-left text-inherit no-underline transition-all duration-200 hover:border-[#9ca3af] hover:shadow-hover"
+            :class="{ 'border-[#9ca3af] shadow-hover': exam.id === selectedExamId }"
             :to="{ name: 'examens', query: { exam: exam.id } }"
           >
-            <div class="exam-card-top">
-              <span class="exam-card-date">{{ formatExamDate(exam.exam_date) }}</span>
-              <span class="exam-card-status">{{ getExamStatusLabel(exam.status) }}</span>
+            <div class="mb-[0.65rem] flex justify-between gap-lg">
+              <span class="text-base text-text-secondary">{{ formatExamDate(exam.exam_date) }}</span>
+              <span class="inline-flex items-center justify-center rounded-full bg-badge-bg px-[0.6rem] py-[0.2rem] text-xs capitalize text-badge-text">{{ getExamStatusLabel(exam.status) }}</span>
             </div>
 
-            <h3>{{ getExamTypeLabel(exam.exam_type) }}</h3>
-            <p class="exam-card-meta">{{ formatExamTime(exam.exam_time) }} · {{ exam.room }}</p>
+            <h3 class="m-0 text-lg text-text-primary">{{ getExamTypeLabel(exam.exam_type) }}</h3>
+            <p class="m-0 mt-[0.35rem] text-base text-text-secondary">{{ formatExamTime(exam.exam_time) }} · {{ exam.room }}</p>
           </RouterLink>
         </div>
       </aside>
 
-      <section class="examens-detail-panel">
-        <div v-if="selectedExam" class="detail-card">
-          <div class="detail-header">
+      <section class="rounded-3xl bg-surface shadow-card" :class="selectedExam ? 'p-2xl' : 'p-2xl'">
+        <div v-if="selectedExam" class="flex flex-col gap-2xl">
+          <div class="mb-xl flex items-start justify-between gap-lg">
             <div>
-              <p class="eyebrow">Detailweergave</p>
-              <h2>{{ getExamTypeLabel(selectedExam.exam_type) }}</h2>
+              <p class="mb-sm text-xs uppercase tracking-[0.14em] text-text-secondary">Detailweergave</p>
+              <h2 class="m-0 text-4xl text-text-primary">{{ getExamTypeLabel(selectedExam.exam_type) }}</h2>
             </div>
 
-            <div class="detail-actions">
-              <span class="detail-status">{{ getExamStatusLabel(selectedExam.status) }}</span>
+            <div class="flex items-center gap-md">
+              <span class="inline-flex items-center justify-center rounded-full bg-badge-bg px-[0.6rem] py-[0.2rem] text-xs capitalize text-badge-text">{{ getExamStatusLabel(selectedExam.status) }}</span>
 
-              <div class="actions">
-                <button v-if="!isEditing" class="btn-secondary" type="button" @click="startEdit">Bewerken</button>
-                <button v-if="!isEditing" class="btn-secondary" type="button" @click="confirmAndDelete" :disabled="deleteLoading">{{ deleteLoading ? 'Verwijderen...' : 'Verwijderen' }}</button>
+              <div class="flex items-center gap-sm">
+                <button v-if="!isEditing" class="cursor-pointer whitespace-nowrap rounded-md border border-border bg-surface px-[0.8rem] py-[0.55rem] font-semibold text-primary transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-65" type="button" @click="startEdit">Bewerken</button>
+                <button v-if="!isEditing" class="cursor-pointer whitespace-nowrap rounded-md border border-border bg-surface px-[0.8rem] py-[0.55rem] font-semibold text-primary transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-65" type="button" @click="confirmAndDelete" :disabled="deleteLoading">{{ deleteLoading ? 'Verwijderen...' : 'Verwijderen' }}</button>
 
-                <button v-if="isEditing" class="btn-secondary" type="button" @click="cancelEdit">Annuleren</button>
-                <button v-if="isEditing" class="btn-primary" type="button" @click="saveEdit" :disabled="saveLoading">{{ saveLoading ? 'Opslaan...' : 'Opslaan' }}</button>
+                <button v-if="isEditing" class="cursor-pointer whitespace-nowrap rounded-md border border-border bg-surface px-[0.8rem] py-[0.55rem] font-semibold text-primary transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-65" type="button" @click="cancelEdit">Annuleren</button>
+                <button v-if="isEditing" class="cursor-pointer whitespace-nowrap rounded-md border border-primary bg-primary px-[0.8rem] py-[0.55rem] font-semibold text-surface transition-colors hover:border-primary-hover hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-65" type="button" @click="saveEdit" :disabled="saveLoading">{{ saveLoading ? 'Opslaan...' : 'Opslaan' }}</button>
               </div>
             </div>
           </div>
 
           <div>
-            <div v-if="!isEditing" class="detail-grid">
-              <div class="detail-item">
-                <span>Datum</span>
-                <strong>{{ formatExamDate(selectedExam.exam_date) }}</strong>
+            <div v-if="!isEditing" class="grid grid-cols-2 gap-lg">
+              <div class="flex flex-col gap-[0.35rem] rounded-xl border border-border-light bg-detail-bg px-lg py-[0.95rem]">
+                <span class="text-base text-text-secondary">Datum</span>
+                <strong class="text-lg text-text-primary">{{ formatExamDate(selectedExam.exam_date) }}</strong>
               </div>
-              <div class="detail-item">
-                <span>Tijd</span>
-                <strong>{{ formatExamTime(selectedExam.exam_time) }}</strong>
+              <div class="flex flex-col gap-[0.35rem] rounded-xl border border-border-light bg-detail-bg px-lg py-[0.95rem]">
+                <span class="text-base text-text-secondary">Tijd</span>
+                <strong class="text-lg text-text-primary">{{ formatExamTime(selectedExam.exam_time) }}</strong>
               </div>
-              <div class="detail-item">
-                <span>Locatie</span>
-                <strong>{{ selectedExam.room }}</strong>
+              <div class="flex flex-col gap-[0.35rem] rounded-xl border border-border-light bg-detail-bg px-lg py-[0.95rem]">
+                <span class="text-base text-text-secondary">Locatie</span>
+                <strong class="text-lg text-text-primary">{{ selectedExam.room }}</strong>
               </div>
-              <div class="detail-item">
-                <span>Type</span>
-                <strong>{{ getExamTypeLabel(selectedExam.exam_type) }}</strong>
+              <div class="flex flex-col gap-[0.35rem] rounded-xl border border-border-light bg-detail-bg px-lg py-[0.95rem]">
+                <span class="text-base text-text-secondary">Type</span>
+                <strong class="text-lg text-text-primary">{{ getExamTypeLabel(selectedExam.exam_type) }}</strong>
               </div>
             </div>
 
-            <div v-else class="edit-form">
-              <label>
-                <span>Datum</span>
-                <input type="date" v-model="editForm.exam_date" />
+            <div v-else class="grid grid-cols-2 gap-lg">
+              <label class="flex flex-col gap-xs">
+                <span class="text-base text-text-secondary">Datum</span>
+                <input type="date" v-model="editForm.exam_date" class="w-full min-w-0 rounded-md border border-border bg-surface px-[0.65rem] py-[0.55rem] text-md text-text-primary" />
               </label>
-              <label>
-                <span>Tijd</span>
-                <input type="time" v-model="editForm.exam_time" step="60" />
+              <label class="flex flex-col gap-xs">
+                <span class="text-base text-text-secondary">Tijd</span>
+                <input type="time" v-model="editForm.exam_time" step="60" class="w-full min-w-0 rounded-md border border-border bg-surface px-[0.65rem] py-[0.55rem] text-md text-text-primary" />
               </label>
-              <label>
-                <span>Locatie</span>
-                <input type="text" v-model.trim="editForm.room" />
+              <label class="flex flex-col gap-xs">
+                <span class="text-base text-text-secondary">Locatie</span>
+                <input type="text" v-model.trim="editForm.room" class="w-full min-w-0 rounded-md border border-border bg-surface px-[0.65rem] py-[0.55rem] text-md text-text-primary" />
               </label>
-              <label>
-                <span>Type</span>
-                <select v-model="editForm.exam_type" aria-label="Examentype">
+              <label class="flex flex-col gap-xs">
+                <span class="text-base text-text-secondary">Type</span>
+                <select v-model="editForm.exam_type" aria-label="Examentype" class="w-full min-w-0 rounded-md border border-border bg-surface px-[0.65rem] py-[0.55rem] text-md text-text-primary">
                   <option v-for="type in eventTypes" :key="type.value" :value="type.value">{{ type.label }}</option>
                 </select>
               </label>
-              <label>
-                <span>Status</span>
-                <select v-model="editForm.status" aria-label="Status">
+              <label class="flex flex-col gap-xs">
+                <span class="text-base text-text-secondary">Status</span>
+                <select v-model="editForm.status" aria-label="Status" class="w-full min-w-0 rounded-md border border-border bg-surface px-[0.65rem] py-[0.55rem] text-md text-text-primary">
                   <option v-for="(label, key) in examStatusLabels" :key="key" :value="key">{{ label }}</option>
                 </select>
               </label>
             </div>
           </div>
 
-          <div class="detail-section">
-            <h3>Beoordelaars</h3>
+          <div>
+            <h3 class="mb-md text-text-primary">Beoordelaars</h3>
 
-            <div style="display:flex; gap:0.6rem; width:100%">
-              <label style="flex:1; display:flex; flex-direction:column; gap:0.25rem">
-                <span style="font-size:0.85rem; color:#6b7280">Slot 1</span>
-                <select style="border:1px solid #d1d5db; border-radius:0.5rem; padding:0.45rem 0.55rem; font-size:0.9rem" :value="getSlotAssessorId(1)" :disabled="assessorActionLoading" @change="onSlotChange(1, $event)">
+            <div class="flex w-full gap-[0.6rem]">
+              <label class="flex flex-1 flex-col gap-xs">
+                <span class="text-sm text-text-secondary">Slot 1</span>
+                <select class="w-full min-w-0 rounded-md border border-border bg-surface px-[0.65rem] py-[0.55rem] text-md text-text-primary" :value="getSlotAssessorId(1)" :disabled="assessorActionLoading" @change="onSlotChange(1, $event)">
                   <option value="">— Geen —</option>
                   <option v-for="a in assessorsOptions" :key="a.id" :value="a.id" :disabled="getSlotAssessorId(2) === a.id">{{ a.name }}{{ a.organization ? ' · ' + a.organization : '' }}</option>
                 </select>
               </label>
-              <label style="flex:1; display:flex; flex-direction:column; gap:0.25rem">
-                <span style="font-size:0.85rem; color:#6b7280">Slot 2</span>
-                <select style="border:1px solid #d1d5db; border-radius:0.5rem; padding:0.45rem 0.55rem; font-size:0.9rem" :value="getSlotAssessorId(2)" :disabled="assessorActionLoading" @change="onSlotChange(2, $event)">
+              <label class="flex flex-1 flex-col gap-xs">
+                <span class="text-sm text-text-secondary">Slot 2</span>
+                <select class="w-full min-w-0 rounded-md border border-border bg-surface px-[0.65rem] py-[0.55rem] text-md text-text-primary" :value="getSlotAssessorId(2)" :disabled="assessorActionLoading" @change="onSlotChange(2, $event)">
                   <option value="">— Geen —</option>
                   <option v-for="a in assessorsOptions" :key="a.id" :value="a.id" :disabled="getSlotAssessorId(1) === a.id">{{ a.name }}{{ a.organization ? ' · ' + a.organization : '' }}</option>
                 </select>
@@ -496,102 +496,68 @@ const unlinkAssessor = async (examAssessorId) => {
             </div>
           </div>
 
-            <div class="detail-section">
-            <h3>Toegewezen studenten</h3>
+          <div>
+            <h3 class="mb-md text-text-primary">Toegewezen studenten</h3>
 
-            <div style="display:flex; gap:0.5rem; margin-bottom:0.75rem; align-items:center">
-              <div style="flex:1; position:relative">
-                <input v-model="studentSearch" placeholder="Zoek student op naam of schoolID..." style="width:100%; border:1px solid #d1d5db; border-radius:0.5rem; padding:0.45rem 0.55rem; font-size:0.9rem; box-sizing:border-box" @focus="showSuggestions = true" @blur="hideSuggestions" @input="onSearchInput" @keydown="onSearchKeydown" />
-                <ul v-if="showSuggestions && filteredStudents.length" style="position:absolute; top:100%; left:0; right:0; background:#fff; border:1px solid #d1d5db; border-radius:0 0 0.5rem 0.5rem; margin:0; padding:0; list-style:none; max-height:200px; overflow-y:auto; z-index:10; box-shadow:0 4px 12px rgba(0,0,0,0.15)">
-                  <li v-for="(s, i) in filteredStudents" :key="s.id" :style="{ padding: '0.45rem 0.55rem', cursor: 'pointer', fontSize: '0.9rem', display: 'flex', justifyContent: 'space-between', gap: '0.5rem', background: i === highlightIndex ? '#f3f4f6' : 'transparent' }" @mousedown.prevent="selectStudent(s)" @mouseenter="highlightIndex = i">
+            <div class="mb-md flex items-center gap-sm">
+              <div class="relative flex-1">
+                <input v-model="studentSearch" placeholder="Zoek student op naam of schoolID..." class="w-full min-w-0 rounded-md border border-border bg-surface px-[0.65rem] py-[0.55rem] text-md text-text-primary" @focus="showSuggestions = true" @blur="hideSuggestions" @input="onSearchInput" @keydown="onSearchKeydown" />
+                <ul v-if="showSuggestions && filteredStudents.length" class="absolute left-0 right-0 top-full z-10 m-0 list-none overflow-y-auto border border-border bg-surface shadow-[0_4px_12px_rgba(0,0,0,0.15)]" style="max-height:200px; border-radius: 0 0 0.5rem 0.5rem;">
+                  <li v-for="(s, i) in filteredStudents" :key="s.id" class="flex cursor-pointer justify-between gap-sm px-[0.55rem] py-[0.45rem] text-md" :class="{ 'bg-gray-100': i === highlightIndex }" @mousedown.prevent="selectStudent(s)" @mouseenter="highlightIndex = i">
                     <span>{{ s.name }}</span>
-                    <span style="color:#6b7280; font-size:0.85rem">{{ s.student_number }}</span>
+                    <span class="text-sm text-text-secondary">{{ s.student_number }}</span>
                   </li>
                 </ul>
-                <p v-else-if="showSuggestions && studentSearch && !filteredStudents.length" style="position:absolute; top:100%; left:0; right:0; background:#fff; border:1px solid #d1d5db; border-radius:0 0 0.5rem 0.5rem; margin:0; padding:0.45rem 0.55rem; font-size:0.9rem; color:#6b7280; z-index:10; box-shadow:0 4px 12px rgba(0,0,0,0.15)">
+                <p v-else-if="showSuggestions && studentSearch && !filteredStudents.length" class="absolute left-0 right-0 top-full z-10 m-0 border border-border bg-surface px-[0.55rem] py-[0.45rem] text-md text-text-secondary shadow-[0_4px_12px_rgba(0,0,0,0.15)]" style="border-radius: 0 0 0.5rem 0.5rem;">
                   Geen studenten gevonden
                 </p>
               </div>
-              <button class="btn-secondary" type="button" style="padding:0.45rem 0.7rem; font-size:0.85rem" :disabled="!linkingStudentId || studentActionLoading" @click="linkStudent">Toevoegen</button>
+              <button class="cursor-pointer whitespace-nowrap rounded-md border border-border bg-surface px-[0.8rem] py-[0.55rem] font-semibold text-primary transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-65" type="button" style="padding:0.45rem 0.7rem; font-size:0.85rem" :disabled="!linkingStudentId || studentActionLoading" @click="linkStudent">Toevoegen</button>
             </div>
 
-            <div v-if="selectedExam.exam_students && selectedExam.exam_students.length" style="overflow-x:auto">
-              <table style="width:100%; border-collapse:collapse; font-size:0.9rem">
+            <div v-if="selectedExam.exam_students && selectedExam.exam_students.length" class="overflow-x-auto">
+              <table class="w-full border-collapse text-md">
                 <thead>
-                  <tr style="border-bottom:2px solid #e5e7eb">
-                    <th style="text-align:left; padding:0.5rem 0.75rem; color:#6b7280; font-weight:600">Naam</th>
-                    <th style="text-align:left; padding:0.5rem 0.75rem; color:#6b7280; font-weight:600">SchoolID</th>
-                    <th style="text-align:left; padding:0.5rem 0.75rem; color:#6b7280; font-weight:600">Opdracht</th>
-                    <th style="text-align:left; padding:0.5rem 0.75rem; color:#6b7280; font-weight:600">Resultaat</th>
-                    <th style="padding:0.5rem 0.75rem; width:40px"></th>
+                  <tr class="border-b-2 border-b-border-light">
+                    <th class="p-sm text-left font-semibold text-text-secondary">Naam</th>
+                    <th class="p-sm text-left font-semibold text-text-secondary">SchoolID</th>
+                    <th class="p-sm text-left font-semibold text-text-secondary">Opdracht</th>
+                    <th class="p-sm text-left font-semibold text-text-secondary">Resultaat</th>
+                    <th class="p-sm" style="width:40px"></th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="es in selectedExam.exam_students" :key="es.id" style="border-bottom:1px solid #f3f4f6">
-                    <td style="padding:0.5rem 0.75rem; font-weight:600">{{ es.student.name }}</td>
-                    <td style="padding:0.5rem 0.75rem; color:#6b7280">{{ es.student.student_number }}</td>
-                    <td style="padding:0.35rem 0.75rem">
-                      <div style="display:flex; align-items:center; gap:0.4rem">
-                        <span style="font-size:0.85rem; color:#374151">—</span>
-                        <button type="button" style="border:1px solid #d1d5db; border-radius:0.4rem; padding:0.25rem 0.5rem; font-size:0.8rem; background:#fff; cursor:pointer; color:#374151">Bekijken</button>
-                        <button type="button" style="border:1px solid #d1d5db; border-radius:0.4rem; padding:0.25rem 0.5rem; font-size:0.8rem; background:#fff; cursor:pointer; color:#374151; white-space:nowrap">Toewijzen</button>
+                  <tr v-for="es in selectedExam.exam_students" :key="es.id" class="border-b border-b-gray-100">
+                    <td class="p-sm font-semibold">{{ es.student.name }}</td>
+                    <td class="p-sm text-text-secondary">{{ es.student.student_number }}</td>
+                    <td class="p-xs p-sm">
+                      <div class="flex items-center gap-[0.4rem]">
+                        <span class="text-sm text-gray-700">—</span>
+                        <button type="button" class="cursor-pointer rounded-[0.4rem] border border-border bg-surface px-[0.5rem] py-[0.25rem] text-sm text-gray-700">Bekijken</button>
+                        <button type="button" class="cursor-pointer whitespace-nowrap rounded-[0.4rem] border border-border bg-surface px-[0.5rem] py-[0.25rem] text-sm text-gray-700">Toewijzen</button>
                       </div>
                     </td>
-                    <td style="padding:0.35rem 0.75rem">
-                      <input type="text" :value="es.result || ''" @blur="updateStudentField(es.id, 'result', $event.target.value || null)" style="width:100%; min-width:80px; border:1px solid #d1d5db; border-radius:0.4rem; padding:0.35rem 0.5rem; font-size:0.85rem; background:#fff" placeholder="—" />
+                    <td class="p-xs p-sm">
+                      <input type="text" :value="es.result || ''" @blur="updateStudentField(es.id, 'result', $event.target.value || null)" class="w-full min-w-0 rounded-[0.4rem] border border-border bg-surface px-[0.5rem] py-[0.35rem] text-sm text-text-primary" style="min-width:80px" placeholder="—" />
                     </td>
-                    <td style="padding:0.5rem 0.75rem">
-                      <button type="button" style="border:none; background:none; cursor:pointer; font-size:1.1rem; color:#b91c1c; padding:0.25rem" :disabled="studentActionLoading" @click="unlinkStudent(es.id)">×</button>
+                    <td class="p-sm">
+                      <button type="button" class="cursor-pointer border-none bg-none p-xs text-lg text-error" :disabled="studentActionLoading" @click="unlinkStudent(es.id)">×</button>
                     </td>
                   </tr>
                 </tbody>
               </table>
             </div>
             <div v-else>
-              <p class="placeholder-copy">Nog geen studenten toegewezen.</p>
+              <p class="text-base text-text-secondary">Nog geen studenten toegewezen.</p>
             </div>
           </div>
         </div>
 
-        <div v-else class="detail-empty">
-          <h2>Kies een examen</h2>
-          <p>Selecteer links een examen om de detailinformatie te bekijken.</p>
+        <div v-else class="flex min-h-[420px] flex-col items-start justify-center p-2xl">
+          <h2 class="m-0 text-5xl text-text-primary">Kies een examen</h2>
+          <p class="mt-md text-text-muted">Selecteer links een examen om de detailinformatie te bekijken.</p>
         </div>
       </section>
     </section>
   </main>
 </template>
-
-<style scoped>
-.detail-card {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.exam-card-status,
-.detail-status {
-  text-transform: capitalize;
-}
-
-.placeholder-box {
-  border: 1px dashed #cbd5e1;
-  border-radius: 0.85rem;
-  padding: 1rem;
-  background: #f8fafc;
-}
-
-.placeholder-box span {
-  display: inline-flex;
-  margin-bottom: 0.5rem;
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: #64748b;
-}
-
-.placeholder-box p {
-  margin: 0;
-  color: #475569;
-}
-</style>
