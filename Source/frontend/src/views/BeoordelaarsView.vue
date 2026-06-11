@@ -227,7 +227,7 @@ const confirmDelete = async () => {
           >
             <div class="mb-[0.65rem] flex justify-between gap-lg">
               <span class="text-base text-text-secondary">{{ a.organization || 'Geen organisatie' }}</span>
-              <span class="inline-flex items-center justify-center rounded-full px-[0.6rem] py-[0.2rem] text-xs capitalize" :style="getAssessorBadgeStyle(a.assessor_type)">{{ getAssessorTypeLabel(a.assessor_type) }}</span>
+              <span class="inline-flex items-center justify-center max-h-6 rounded-full px-[0.6rem] py-[0.2rem] text-xs capitalize" :style="getAssessorBadgeStyle(a.assessor_type)">{{ getAssessorTypeLabel(a.assessor_type) }}</span>
             </div>
 
             <h3 class="m-0 text-lg text-text-primary">{{ a.name }}</h3>
