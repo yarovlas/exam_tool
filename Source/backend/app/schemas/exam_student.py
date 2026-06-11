@@ -9,7 +9,7 @@ from app.schemas.student import StudentRead
 class ExamStudentCreate(BaseModel):
     exam_planning_id: int
     student_id: int
-    phase: str = Field(default="", max_length=100)
+    phase: Optional[str] = Field(default=None, max_length=100)
     result: Optional[str] = Field(default=None, max_length=50)
 
 
@@ -24,7 +24,7 @@ class ExamStudentRead(BaseModel):
     id: int
     exam_planning_id: int
     student_id: int
-    phase: str
+    phase: Optional[str]  # nullable — fallback naar student.phase in de business-laag
     result: Optional[str]
     student: StudentRead
     created_at: datetime
