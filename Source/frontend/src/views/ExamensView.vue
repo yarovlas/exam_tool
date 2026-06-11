@@ -211,6 +211,9 @@ onMounted(async () => {
 })
 
 const linkingStudentId = ref(null)
+const studentSearch = ref('')
+const showSuggestions = ref(false)
+const highlightIndex = ref(0)
 const studentActionLoading = ref(false)
 
 const availableStudents = computed(() => {
@@ -219,6 +222,14 @@ const availableStudents = computed(() => {
     (selectedExam.value.exam_students || []).map((es) => es.student_id)
   )
   return studentsOptions.value.filter((s) => !linkedIds.has(s.id))
+})
+
+const filteredStudents = computed(() => {
+  if (!studentSearch.value) return []
+  const q = studentSearch.value.toLowerCase()
+  return availableStudents.value.filter(
+    (s) => s.name.toLowerCase().includes(q) || s.student_number.toLowerCase().includes(q)
+  )
 })
 
 const linkStudent = async () => {
@@ -237,6 +248,38 @@ const linkStudent = async () => {
     console.error(e)
   } finally {
     studentActionLoading.value = false
+  }
+}
+
+const selectStudent = async (student) => {
+  if (!selectedExam.value) return
+  linkingStudentId.value = student.id
+  showSuggestions.value = false
+  highlightIndex.value = 0
+  await linkStudent()
+  studentSearch.value = ''
+}
+
+const onSearchInput = () => {
+  showSuggestions.value = true
+  highlightIndex.value = 0
+}
+
+const hideSuggestions = () => {
+  setTimeout(() => { showSuggestions.value = false }, 150)
+}
+
+const onSearchKeydown = (e) => {
+  if (e.key === 'Escape') {
+    showSuggestions.value = false
+  } else if (e.key === 'ArrowDown') {
+    e.preventDefault()
+    highlightIndex.value = Math.min(highlightIndex.value + 1, filteredStudents.value.length - 1)
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault()
+    highlightIndex.value = Math.max(highlightIndex.value - 1, 0)
+  } else if (e.key === 'Enter' && filteredStudents.value[highlightIndex.value]) {
+    selectStudent(filteredStudents.value[highlightIndex.value])
   }
 }
 
@@ -453,8 +496,24 @@ const unlinkAssessor = async (examAssessorId) => {
             </div>
           </div>
 
-          <div class="detail-section">
+            <div class="detail-section">
             <h3>Toegewezen studenten</h3>
+
+            <div style="display:flex; gap:0.5rem; margin-bottom:0.75rem; align-items:center">
+              <div style="flex:1; position:relative">
+                <input v-model="studentSearch" placeholder="Zoek student op naam of schoolID..." style="width:100%; border:1px solid #d1d5db; border-radius:0.5rem; padding:0.45rem 0.55rem; font-size:0.9rem; box-sizing:border-box" @focus="showSuggestions = true" @blur="hideSuggestions" @input="onSearchInput" @keydown="onSearchKeydown" />
+                <ul v-if="showSuggestions && filteredStudents.length" style="position:absolute; top:100%; left:0; right:0; background:#fff; border:1px solid #d1d5db; border-radius:0 0 0.5rem 0.5rem; margin:0; padding:0; list-style:none; max-height:200px; overflow-y:auto; z-index:10; box-shadow:0 4px 12px rgba(0,0,0,0.15)">
+                  <li v-for="(s, i) in filteredStudents" :key="s.id" :style="{ padding: '0.45rem 0.55rem', cursor: 'pointer', fontSize: '0.9rem', display: 'flex', justifyContent: 'space-between', gap: '0.5rem', background: i === highlightIndex ? '#f3f4f6' : 'transparent' }" @mousedown.prevent="selectStudent(s)" @mouseenter="highlightIndex = i">
+                    <span>{{ s.name }}</span>
+                    <span style="color:#6b7280; font-size:0.85rem">{{ s.student_number }}</span>
+                  </li>
+                </ul>
+                <p v-else-if="showSuggestions && studentSearch && !filteredStudents.length" style="position:absolute; top:100%; left:0; right:0; background:#fff; border:1px solid #d1d5db; border-radius:0 0 0.5rem 0.5rem; margin:0; padding:0.45rem 0.55rem; font-size:0.9rem; color:#6b7280; z-index:10; box-shadow:0 4px 12px rgba(0,0,0,0.15)">
+                  Geen studenten gevonden
+                </p>
+              </div>
+              <button class="btn-secondary" type="button" style="padding:0.45rem 0.7rem; font-size:0.85rem" :disabled="!linkingStudentId || studentActionLoading" @click="linkStudent">Toevoegen</button>
+            </div>
 
             <div v-if="selectedExam.exam_students && selectedExam.exam_students.length" style="overflow-x:auto">
               <table style="width:100%; border-collapse:collapse; font-size:0.9rem">
@@ -490,14 +549,6 @@ const unlinkAssessor = async (examAssessorId) => {
             </div>
             <div v-else>
               <p class="placeholder-copy">Nog geen studenten toegewezen.</p>
-            </div>
-
-            <div style="display:flex; gap:0.5rem; margin-top:0.75rem; align-items:center">
-              <select v-model="linkingStudentId" style="flex:1; border:1px solid #d1d5db; border-radius:0.5rem; padding:0.45rem 0.55rem; font-size:0.9rem">
-                <option :value="null">— Voeg student toe —</option>
-                <option v-for="s in availableStudents" :key="s.id" :value="s.id">{{ s.name }} · {{ s.student_number }}</option>
-              </select>
-              <button class="btn-secondary" type="button" style="padding:0.45rem 0.7rem; font-size:0.85rem" :disabled="!linkingStudentId || studentActionLoading" @click="linkStudent">Toevoegen</button>
             </div>
           </div>
         </div>
