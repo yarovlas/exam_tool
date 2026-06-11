@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { useAuthStore } from '../services/authStore'
+import { useAuthStore, isTokenExpired } from '../services/authStore'
 
 const routes = [
   { path: '/', name: 'dashboard', component: () => import('../views/DashboardView.vue') },
@@ -20,10 +20,15 @@ const router = createRouter({
 const publicRoutes = ['inloggen']
 
 router.beforeEach((to, from, next) => {
-  const { isAuthenticated } = useAuthStore()
+  const { isAuthenticated, state, clearAuth } = useAuthStore()
 
   if (publicRoutes.includes(to.name) && isAuthenticated.value) {
     return next('/')
+  }
+
+  if (isAuthenticated.value && isTokenExpired(state.token)) {
+    clearAuth()
+    return next({ name: 'inloggen', query: { redirect: to.fullPath } })
   }
 
   if (!publicRoutes.includes(to.name) && !isAuthenticated.value) {
