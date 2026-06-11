@@ -225,7 +225,7 @@ const availableStudents = computed(() => {
 })
 
 const filteredStudents = computed(() => {
-  if (!studentSearch.value) return []
+  if (!studentSearch.value) return availableStudents.value
   const q = studentSearch.value.toLowerCase()
   return availableStudents.value.filter(
     (s) => s.name.toLowerCase().includes(q) || s.student_number.toLowerCase().includes(q)
