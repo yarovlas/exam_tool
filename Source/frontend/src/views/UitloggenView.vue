@@ -1,7 +1,20 @@
 <script setup>
-import PageTemplate from '../components/PageTemplate.vue'
+import { onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+
+import { useAuthStore } from '../services/authStore'
+
+const router = useRouter()
+const { clearAuth } = useAuthStore()
+
+onMounted(() => {
+  clearAuth()
+  router.replace('/inloggen')
+})
 </script>
 
 <template>
-  <PageTemplate title="Uitloggen" />
+  <main class="mx-auto w-[1400px] px-3xl">
+    <p>U wordt uitgelogd...</p>
+  </main>
 </template>

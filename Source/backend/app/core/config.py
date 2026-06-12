@@ -17,13 +17,20 @@ class Settings:
     api_prefix: str = os.getenv("API_PREFIX", "/api")
     cors_allowed_origins_raw: str = os.getenv("CORS_ALLOWED_ORIGINS", "*")
 
-    pg_host: str = os.getenv("PGHOST", "localhost")
-    pg_port: int = int(os.getenv("PGPORT", "5432"))
-    pg_user: str = os.getenv("PGUSER", "exam_admin")
-    pg_password: str = os.getenv("PGPASSWORD", "exam_admin")
-    pg_database: str = os.getenv("PGDATABASE", "exam_tool")
+    pg_host: str = os.getenv("PGHOST") or "localhost"
+    pg_port: int = int(os.getenv("PGPORT") or "5432")
+    pg_user: str = os.getenv("PGUSER") or "exam_admin"
+    pg_password: str = os.getenv("PGPASSWORD") or "exam_admin"
+    pg_database: str = os.getenv("PGDATABASE") or "exam_tool"
 
     database_url: str = os.getenv("DATABASE_URL", "")
+
+    # Auth settings — used as seed defaults when app_auth table is empty
+    auth_email: str = os.getenv("AUTH_EMAIL", "admin@talland.nl")
+    auth_password: str = os.getenv("AUTH_PASSWORD", "")
+    jwt_secret: str = os.getenv("JWT_SECRET", "")
+    jwt_algorithm: str = os.getenv("JWT_ALGORITHM", "HS256")
+    jwt_expiry_minutes: int = int(os.getenv("JWT_EXPIRY_MINUTES", "480"))
 
     @property
     def sqlalchemy_database_uri(self) -> str:

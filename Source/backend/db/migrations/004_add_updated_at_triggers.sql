@@ -26,14 +26,6 @@ BEGIN
                  EXECUTE FUNCTION set_updated_at()';
     END IF;
 
-    IF to_regclass('public.exams') IS NOT NULL
-       AND NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'set_exams_updated_at') THEN
-        EXECUTE 'CREATE TRIGGER set_exams_updated_at
-                 BEFORE UPDATE ON exams
-                 FOR EACH ROW
-                 EXECUTE FUNCTION set_updated_at()';
-    END IF;
-
     IF to_regclass('public.exam_students') IS NOT NULL
        AND NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'set_exam_students_updated_at') THEN
         EXECUTE 'CREATE TRIGGER set_exam_students_updated_at
