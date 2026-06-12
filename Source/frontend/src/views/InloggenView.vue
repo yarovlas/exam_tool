@@ -43,30 +43,29 @@ const submitLogin = async () => {
 </script>
 
 <template>
-  <main class="main-content">
-    <div class="login-layout">
-      <section class="login-card">
-        <div class="login-header">
-          <h1>Inloggen</h1>
+  <main class="mx-auto w-[1400px] px-3xl">
+    <div class="flex min-h-[calc(100vh-120px)] items-center justify-center">
+      <section class="w-full max-w-[420px] rounded-lg bg-surface p-3xl shadow-sidebar">
+        <div class="mb-3xl">
+          <h1 class="text-5xl text-heading">Inloggen</h1>
         </div>
 
-        <form class="login-form" @submit.prevent="submitLogin">
-          <label class="login-field">
-            <span>Email</span>
-            <input v-model="email" type="email"/>
+        <form class="flex flex-col gap-lg" @submit.prevent="submitLogin">
+          <label class="flex flex-col gap-[0.4rem]">
+            <span class="text-sm font-semibold text-gray-700">Email</span>
+            <input v-model="email" type="email" class="w-full min-w-0 rounded-md border border-border bg-surface px-[0.75rem] py-[0.7rem] text-md focus:border-brand focus:outline-none" />
           </label>
 
-          <label class="login-field">
-            <span>Wachtwoord</span>
-
-            <input v-model="password" type="password"/>
+          <label class="flex flex-col gap-[0.4rem]">
+            <span class="text-sm font-semibold text-gray-700">Wachtwoord</span>
+            <input v-model="password" type="password" class="w-full min-w-0 rounded-md border border-border bg-surface px-[0.75rem] py-[0.7rem] text-md focus:border-brand focus:outline-none" @keydown.enter="submitLogin" />
           </label>
 
-          <p v-if="loginError" class="login-error">
+          <p v-if="loginError" class="text-sm text-error">
             {{ loginError }}
           </p>
 
-          <button type="submit" class="btn-primary">
+          <button type="submit" class="mt-lg cursor-pointer whitespace-nowrap rounded-md border border-primary bg-primary px-[0.8rem] py-[0.55rem] font-semibold text-surface transition-colors hover:border-primary-hover hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-65">
             {{ loginLoading ? 'Bezig...' : 'Inloggen' }}
           </button>
         </form>
@@ -74,76 +73,3 @@ const submitLogin = async () => {
     </div>
   </main>
 </template>
-
-<style scoped>
-.login-layout {
-  min-height: calc(100vh - 120px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.login-card {
-  width: 100%;
-  max-width: 420px;
-  background-color: white;
-  border-radius: 0.75rem;
-  padding: 2rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  gap: 3rem;
-}
-
-.login-header {
-  margin-bottom: 2rem;
-}
-
-.login-header h1 {
-  font-size: 2rem;
-  color: #1a1a1a;
-  margin-bottom: 0.5rem;
-}
-
-.login-header p {
-  color: #666;
-  font-size: 0.95rem;
-}
-
-.login-form {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.login-field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-}
-
-.login-field span {
-  font-size: 0.875rem;
-  color: #374151;
-  font-weight: 600;
-}
-
-.login-field input {
-  border: 1px solid #d1d5db;
-  border-radius: 0.5rem;
-  padding: 0.7rem 0.75rem;
-  font-size: 0.95rem;
-  font-family: inherit;
-}
-
-.login-field input:focus {
-  outline: none;
-  border-color: #7c3aed;
-}
-
-.login-error {
-  font-size: 0.85rem;
-  color: #b91c1c;
-}
-.btn-primary {
-  margin-top: 1rem;
-}
-</style>

@@ -4,6 +4,9 @@ import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { eventTypes, examStatusLabels } from '../constants/dashboard'
 import { listExamPlanning, updateExamPlanning, deleteExamPlanning } from '../services/examPlanningApi'
 import { listAssessors } from '../services/assessorsApi'
+import { listStudents } from '../services/studentsApi'
+import { createExamStudent, updateExamStudent, deleteExamStudent } from '../services/examStudentsApi'
+import { createExamAssessor, deleteExamAssessor } from '../services/examAssessorsApi'
 
 const route = useRoute()
 const router = useRouter()
@@ -64,11 +67,28 @@ const editForm = reactive({
   room: '',
   exam_type: 'practical',
   status: 'planned',
-  assessor_slot_1: null,
-  assessor_slot_2: null,
 })
 
 const assessorsOptions = ref([])
+const studentsOptions = ref([])
+
+const assessorTypeLabels = {
+  teacher: 'Interne',
+  external: 'Externe',
+}
+
+const assessorsByType = computed(() => {
+  const groups = {}
+  for (const a of assessorsOptions.value) {
+    const type = a.assessor_type || 'other'
+    if (!groups[type]) groups[type] = []
+    groups[type].push(a)
+  }
+  return Object.entries(groups).map(([type, items]) => ({
+    label: assessorTypeLabels[type] || type,
+    items,
+  }))
+})
 
 watch(selectedExam, (exam) => {
   isEditing.value = false
@@ -82,15 +102,6 @@ watch(selectedExam, (exam) => {
     editForm.exam_type = exam.exam_type || 'practical'
     editForm.status = exam.status || 'planned'
 
-    // populate assessor slots from exam_assessors
-    editForm.assessor_slot_1 = null
-    editForm.assessor_slot_2 = null
-    if (Array.isArray(exam.exam_assessors)) {
-      for (const ea of exam.exam_assessors) {
-        if (ea.assessor_order === 1) editForm.assessor_slot_1 = ea.assessor.id
-        if (ea.assessor_order === 2) editForm.assessor_slot_2 = ea.assessor.id
-      }
-    }
   }
 })
 
@@ -98,8 +109,15 @@ const loadAssessors = async () => {
   try {
     assessorsOptions.value = await listAssessors({ limit: 500 })
   } catch (e) {
-    // ignore silently for now
     assessorsOptions.value = []
+  }
+}
+
+const loadStudents = async () => {
+  try {
+    studentsOptions.value = await listStudents({ limit: 500 })
+  } catch (e) {
+    studentsOptions.value = []
   }
 }
 
@@ -133,15 +151,6 @@ const cancelEdit = () => {
     editForm.exam_type = selectedExam.value.exam_type
     editForm.status = selectedExam.value.status
 
-    // reset assessor slots
-    editForm.assessor_slot_1 = null
-    editForm.assessor_slot_2 = null
-    if (Array.isArray(selectedExam.value.exam_assessors)) {
-      for (const ea of selectedExam.value.exam_assessors) {
-        if (ea.assessor_order === 1) editForm.assessor_slot_1 = ea.assessor.id
-        if (ea.assessor_order === 2) editForm.assessor_slot_2 = ea.assessor.id
-      }
-    }
   }
 }
 
@@ -158,14 +167,6 @@ const saveEdit = async () => {
       exam_type: editForm.exam_type,
       status: editForm.status,
     }
-
-    // build assessors array if any selected
-    const assessorsPayload = []
-    if (editForm.assessor_slot_1) assessorsPayload.push({ assessor_id: Number(editForm.assessor_slot_1), assessor_order: 1 })
-    if (editForm.assessor_slot_2) assessorsPayload.push({ assessor_id: Number(editForm.assessor_slot_2), assessor_order: 2 })
-
-    // include assessors key even if empty to clear assignments
-    payload.assessors = assessorsPayload
 
     await updateExamPlanning(selectedExam.value.id, payload)
     await loadExamPlanning()
@@ -224,487 +225,368 @@ watch(
 )
 
 onMounted(async () => {
-  await Promise.all([loadExamPlanning(), loadAssessors()])
+  await Promise.all([loadExamPlanning(), loadAssessors(), loadStudents()])
 })
+
+const linkingStudentId = ref(null)
+const studentSearch = ref('')
+const showSuggestions = ref(false)
+const highlightIndex = ref(0)
+const studentActionLoading = ref(false)
+
+const availableStudents = computed(() => {
+  if (!selectedExam.value) return studentsOptions.value
+  const linkedIds = new Set(
+    (selectedExam.value.exam_students || []).map((es) => es.student_id)
+  )
+  return studentsOptions.value.filter((s) => !linkedIds.has(s.id))
+})
+
+const filteredStudents = computed(() => {
+  if (!studentSearch.value) return availableStudents.value
+  const q = studentSearch.value.toLowerCase()
+  return availableStudents.value.filter(
+    (s) => s.name.toLowerCase().includes(q) || s.student_number.toLowerCase().includes(q)
+  )
+})
+
+const linkStudent = async () => {
+  if (!linkingStudentId.value || !selectedExam.value) return
+  studentActionLoading.value = true
+  try {
+    await createExamStudent({
+      exam_planning_id: selectedExam.value.id,
+      student_id: linkingStudentId.value,
+      phase: '',
+    })
+    linkingStudentId.value = null
+    await loadExamPlanning()
+    router.replace({ name: 'examens', query: { exam: selectedExam.value.id } })
+  } catch (e) {
+    console.error(e)
+  } finally {
+    studentActionLoading.value = false
+  }
+}
+
+const selectStudent = async (student) => {
+  if (!selectedExam.value) return
+  linkingStudentId.value = student.id
+  showSuggestions.value = false
+  highlightIndex.value = 0
+  await linkStudent()
+  studentSearch.value = ''
+}
+
+const onSearchInput = () => {
+  showSuggestions.value = true
+  highlightIndex.value = 0
+}
+
+const hideSuggestions = () => {
+  setTimeout(() => { showSuggestions.value = false }, 150)
+}
+
+const onSearchKeydown = (e) => {
+  if (e.key === 'Escape') {
+    showSuggestions.value = false
+  } else if (e.key === 'ArrowDown') {
+    e.preventDefault()
+    highlightIndex.value = Math.min(highlightIndex.value + 1, filteredStudents.value.length - 1)
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault()
+    highlightIndex.value = Math.max(highlightIndex.value - 1, 0)
+  } else if (e.key === 'Enter' && filteredStudents.value[highlightIndex.value]) {
+    selectStudent(filteredStudents.value[highlightIndex.value])
+  }
+}
+
+const updateStudentField = async (examStudentId, field, value) => {
+  if (field === 'result' && value !== null) {
+    const num = parseFloat(value)
+    if (Number.isNaN(num) || num < 0 || num > 10) {
+      return
+    }
+  }
+
+  try {
+    await updateExamStudent(examStudentId, { [field]: value })
+    await loadExamPlanning()
+    if (selectedExam.value) {
+      router.replace({ name: 'examens', query: { exam: selectedExam.value.id } })
+    }
+  } catch (e) {
+    console.error(e)
+  }
+}
+
+const unlinkStudent = async (examStudentId) => {
+  studentActionLoading.value = true
+  try {
+    await deleteExamStudent(examStudentId)
+    await loadExamPlanning()
+    if (selectedExam.value) {
+      router.replace({ name: 'examens', query: { exam: selectedExam.value.id } })
+    }
+  } catch (e) {
+    console.error(e)
+  } finally {
+    studentActionLoading.value = false
+  }
+}
+
+const assessorActionLoading = ref(false)
+
+const getSlotAssessorId = (slotOrder) => {
+  if (!selectedExam.value) return null
+  const ea = (selectedExam.value.exam_assessors || []).find((ea) => ea.assessor_order === slotOrder)
+  return ea ? ea.assessor_id : null
+}
+
+const onSlotChange = async (slotOrder, event) => {
+  const newAssessorId = event.target.value ? Number(event.target.value) : null
+  if (!selectedExam.value) return
+  assessorActionLoading.value = true
+  try {
+    const current = (selectedExam.value.exam_assessors || []).find((ea) => ea.assessor_order === slotOrder)
+    if (newAssessorId) {
+      if (current) {
+        await deleteExamAssessor(current.id)
+      }
+      await createExamAssessor({
+        exam_planning_id: selectedExam.value.id,
+        assessor_id: newAssessorId,
+        assessor_order: slotOrder,
+      })
+    } else if (current) {
+      await deleteExamAssessor(current.id)
+    }
+    await loadExamPlanning()
+    router.replace({ name: 'examens', query: { exam: selectedExam.value.id } })
+  } catch (e) {
+    console.error(e)
+  } finally {
+    assessorActionLoading.value = false
+  }
+}
+
+const unlinkAssessor = async (examAssessorId) => {
+  assessorActionLoading.value = true
+  try {
+    await deleteExamAssessor(examAssessorId)
+    await loadExamPlanning()
+    if (selectedExam.value) {
+      router.replace({ name: 'examens', query: { exam: selectedExam.value.id } })
+    }
+  } catch (e) {
+    console.error(e)
+  } finally {
+    assessorActionLoading.value = false
+  }
+}
 </script>
 
 <template>
-  <main class="examens-page">
-    <section class="examens-hero">
+  <main class="mx-auto flex w-[1400px] flex-col p-3xl">
+    <section class="mb-3xl flex items-start justify-between gap-2xl">
       <div>
-        <p class="eyebrow">Examens</p>
-        <h1>Overzicht van geplande examens</h1>
-        <p class="hero-copy">
-          Selecteer een examen uit de lijst om de detailpagina te openen. De toegewezen studentenlijst komt hier later.
+        <p class="mb-sm text-xs uppercase tracking-[0.14em] text-text-secondary">Examens</p>
+        <h1 class="m-0 text-5xl text-text-primary">Overzicht van geplande examens</h1>
+        <p class="mt-md max-w-[60ch] text-text-secondary">
+          Selecteer een examen uit de lijst om de detailpagina te openen.
         </p>
       </div>
 
-      <div class="examens-summary-card">
-        <span class="summary-label">Totaal gepland</span>
-        <strong>{{ examPlanningItems.length }}</strong>
+      <div class="flex min-w-[180px] flex-col gap-xs rounded-3xl bg-gradient-to-br from-primary to-[#374151] px-xl py-lg text-surface">
+        <span class="text-sm text-white/75">Totaal gepland</span>
+        <strong class="text-5xl">{{ examPlanningItems.length }}</strong>
       </div>
     </section>
 
-    <section class="examens-layout">
-      <aside class="examens-list-panel">
-        <div class="panel-header">
-          <h2>Examenlijst</h2>
-          <p>{{ examPlanningLoading ? 'Laden...' : `${examPlanningItems.length} examens` }}</p>
+    <section class="flex-1 grid min-h-0 gap-2xl" style="grid-template-columns: 360px 900px">
+      <aside class="flex min-h-0 flex-col rounded-3xl bg-surface p-xl shadow-card">
+        <div class="mb-lg">
+          <h2 class="m-0 text-text-primary">Examenlijst</h2>
+          <p class="mt-[0.35rem] text-base text-text-secondary">{{ examPlanningLoading ? 'Laden...' : `${examPlanningItems.length} examens` }}</p>
         </div>
 
-        <p v-if="examPlanningError" class="panel-error">{{ examPlanningError }}</p>
+        <p v-if="examPlanningError" class="mt-[0.35rem] text-base text-error">{{ examPlanningError }}</p>
 
-        <div v-else class="examens-list">
+        <div v-else class="flex flex-1 flex-col gap-md overflow-y-auto min-h-0 pt-px" style="max-height: calc(100vh - 300px)">
           <RouterLink
             v-for="exam in examPlanningItems"
             :key="exam.id"
-            class="exam-card"
-            :class="{ active: exam.id === selectedExamId }"
+            class="block w-full rounded-2xl border border-border-light bg-surface px-lg py-lg text-left text-inherit no-underline transition-all duration-200 hover:border-[#9ca3af] hover:shadow-hover"
+            :class="{ 'border-[#9ca3af] shadow-hover': exam.id === selectedExamId }"
             :to="{ name: 'examens', query: { exam: exam.id } }"
           >
-            <div class="exam-card-top">
-              <span class="exam-card-date">{{ formatExamDate(exam.exam_date) }}</span>
-              <span class="exam-card-status">{{ getExamStatusLabel(exam.status) }}</span>
+            <div class="mb-[0.65rem] flex justify-between gap-lg">
+              <span class="text-base text-text-secondary">{{ formatExamDate(exam.exam_date) }}</span>
+              <span class="inline-flex items-center justify-center rounded-full bg-badge-bg px-[0.6rem] py-[0.2rem] text-xs capitalize text-badge-text">{{ getExamStatusLabel(exam.status) }}</span>
             </div>
 
-            <h3>{{ getExamTypeLabel(exam.exam_type) }}</h3>
-            <p class="exam-card-meta">{{ formatExamTime(exam.exam_time) }} · {{ exam.room }}</p>
+            <h3 class="m-0 text-lg text-text-primary">{{ getExamTypeLabel(exam.exam_type) }}</h3>
+            <p class="m-0 mt-[0.35rem] text-base text-text-secondary">{{ formatExamTime(exam.exam_time) }} · {{ exam.room }}</p>
           </RouterLink>
         </div>
       </aside>
 
-      <section class="examens-detail-panel">
-        <div v-if="selectedExam" class="detail-card">
-          <div class="detail-header">
+      <section class="rounded-3xl bg-surface shadow-card" :class="selectedExam ? 'p-2xl' : 'p-2xl'">
+        <div v-if="selectedExam" class="flex flex-col gap-2xl">
+          <div class="mb-xl flex items-start justify-between gap-lg">
             <div>
-              <p class="eyebrow">Detailweergave</p>
-              <h2>{{ getExamTypeLabel(selectedExam.exam_type) }}</h2>
+              <p class="mb-sm text-xs uppercase tracking-[0.14em] text-text-secondary">Detailweergave</p>
+              <h2 class="m-0 text-4xl text-text-primary">{{ getExamTypeLabel(selectedExam.exam_type) }}</h2>
             </div>
 
-            <div class="detail-actions">
-              <span class="detail-status">{{ getExamStatusLabel(selectedExam.status) }}</span>
+            <div class="flex items-center gap-md">
+              <span class="inline-flex items-center justify-center rounded-full bg-badge-bg px-[0.6rem] py-[0.2rem] text-xs capitalize text-badge-text">{{ getExamStatusLabel(selectedExam.status) }}</span>
 
-              <div class="actions">
-                <button v-if="!isEditing" class="btn-secondary" type="button" @click="startEdit">Bewerken</button>
-                <button v-if="!isEditing" class="btn-secondary" type="button" @click="confirmAndDelete" :disabled="deleteLoading">{{ deleteLoading ? 'Verwijderen...' : 'Verwijderen' }}</button>
+              <div class="flex items-center gap-sm">
+                <button v-if="!isEditing" class="cursor-pointer whitespace-nowrap rounded-md border border-border bg-surface px-[0.8rem] py-[0.55rem] font-semibold text-primary transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-65" type="button" @click="startEdit">Bewerken</button>
+                <button v-if="!isEditing" class="cursor-pointer whitespace-nowrap rounded-md border border-border bg-surface px-[0.8rem] py-[0.55rem] font-semibold text-primary transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-65" type="button" @click="confirmAndDelete" :disabled="deleteLoading">{{ deleteLoading ? 'Verwijderen...' : 'Verwijderen' }}</button>
 
-                <button v-if="isEditing" class="btn-secondary" type="button" @click="cancelEdit">Annuleren</button>
-                <button v-if="isEditing" class="btn-primary" type="button" @click="saveEdit" :disabled="saveLoading">{{ saveLoading ? 'Opslaan...' : 'Opslaan' }}</button>
+                <button v-if="isEditing" class="cursor-pointer whitespace-nowrap rounded-md border border-border bg-surface px-[0.8rem] py-[0.55rem] font-semibold text-primary transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-65" type="button" @click="cancelEdit">Annuleren</button>
+                <button v-if="isEditing" class="cursor-pointer whitespace-nowrap rounded-md border border-primary bg-primary px-[0.8rem] py-[0.55rem] font-semibold text-surface transition-colors hover:border-primary-hover hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-65" type="button" @click="saveEdit" :disabled="saveLoading">{{ saveLoading ? 'Opslaan...' : 'Opslaan' }}</button>
               </div>
             </div>
           </div>
 
           <div>
-            <div v-if="!isEditing" class="detail-grid">
-              <div class="detail-item">
-                <span>Datum</span>
-                <strong>{{ formatExamDate(selectedExam.exam_date) }}</strong>
+            <div v-if="!isEditing" class="grid grid-cols-2 gap-lg">
+              <div class="flex flex-col gap-[0.35rem] rounded-xl border border-border-light bg-detail-bg px-lg py-[0.95rem]">
+                <span class="text-base text-text-secondary">Datum</span>
+                <strong class="text-lg text-text-primary">{{ formatExamDate(selectedExam.exam_date) }}</strong>
               </div>
-              <div class="detail-item">
-                <span>Tijd</span>
-                <strong>{{ formatExamTime(selectedExam.exam_time) }}</strong>
+              <div class="flex flex-col gap-[0.35rem] rounded-xl border border-border-light bg-detail-bg px-lg py-[0.95rem]">
+                <span class="text-base text-text-secondary">Tijd</span>
+                <strong class="text-lg text-text-primary">{{ formatExamTime(selectedExam.exam_time) }}</strong>
               </div>
-              <div class="detail-item">
-                <span>Locatie</span>
-                <strong>{{ selectedExam.room }}</strong>
+              <div class="flex flex-col gap-[0.35rem] rounded-xl border border-border-light bg-detail-bg px-lg py-[0.95rem]">
+                <span class="text-base text-text-secondary">Locatie</span>
+                <strong class="text-lg text-text-primary">{{ selectedExam.room }}</strong>
               </div>
-              <div class="detail-item">
-                <span>Type</span>
-                <strong>{{ getExamTypeLabel(selectedExam.exam_type) }}</strong>
+              <div class="flex flex-col gap-[0.35rem] rounded-xl border border-border-light bg-detail-bg px-lg py-[0.95rem]">
+                <span class="text-base text-text-secondary">Type</span>
+                <strong class="text-lg text-text-primary">{{ getExamTypeLabel(selectedExam.exam_type) }}</strong>
               </div>
             </div>
 
-            <div v-else class="edit-form">
-              <label>
-                <span>Datum</span>
-                <input type="date" v-model="editForm.exam_date" />
+            <div v-else class="grid grid-cols-2 gap-lg">
+              <label class="flex flex-col gap-xs">
+                <span class="text-base text-text-secondary">Datum</span>
+                <input type="date" v-model="editForm.exam_date" class="w-full min-w-0 rounded-md border border-border bg-surface px-[0.65rem] py-[0.55rem] text-md text-text-primary" />
               </label>
-              <label>
-                <span>Tijd</span>
-                <input type="time" v-model="editForm.exam_time" step="60" />
+              <label class="flex flex-col gap-xs">
+                <span class="text-base text-text-secondary">Tijd</span>
+                <input type="time" v-model="editForm.exam_time" step="60" class="w-full min-w-0 rounded-md border border-border bg-surface px-[0.65rem] py-[0.55rem] text-md text-text-primary" />
               </label>
-              <label>
-                <span>Locatie</span>
-                <input type="text" v-model.trim="editForm.room" />
+              <label class="flex flex-col gap-xs">
+                <span class="text-base text-text-secondary">Locatie</span>
+                <input type="text" v-model.trim="editForm.room" class="w-full min-w-0 rounded-md border border-border bg-surface px-[0.65rem] py-[0.55rem] text-md text-text-primary" />
               </label>
-              <label>
-                <span>Type</span>
-                <select v-model="editForm.exam_type" aria-label="Examentype">
+              <label class="flex flex-col gap-xs">
+                <span class="text-base text-text-secondary">Type</span>
+                <select v-model="editForm.exam_type" aria-label="Examentype" class="w-full min-w-0 rounded-md border border-border bg-surface px-[0.65rem] py-[0.55rem] text-md text-text-primary">
                   <option v-for="type in eventTypes" :key="type.value" :value="type.value">{{ type.label }}</option>
                 </select>
               </label>
-              <label>
-                <span>Status</span>
-                <select v-model="editForm.status" aria-label="Status">
+              <label class="flex flex-col gap-xs">
+                <span class="text-base text-text-secondary">Status</span>
+                <select v-model="editForm.status" aria-label="Status" class="w-full min-w-0 rounded-md border border-border bg-surface px-[0.65rem] py-[0.55rem] text-md text-text-primary">
                   <option v-for="(label, key) in examStatusLabels" :key="key" :value="key">{{ label }}</option>
                 </select>
               </label>
             </div>
           </div>
 
-          <div class="detail-section">
-            <h3>Beoordelaars</h3>
+          <div>
+            <h3 class="mb-md text-text-primary">Beoordelaars</h3>
 
-            <div v-if="!isEditing">
-              <div v-if="selectedExam.exam_assessors && selectedExam.exam_assessors.length">
-                <ul style="list-style:none; padding:0; display:flex; gap:0.75rem; flex-direction:row">
-                  <li v-for="ea in selectedExam.exam_assessors" :key="ea.id">
-                    <div style="padding:0.5rem 0.75rem; border-radius:0.6rem; background:#f8fafc; border:1px solid #e5e7eb">
-                      <div style="font-weight:600">{{ ea.assessor.name }}</div>
-                      <div style="font-size:0.85rem; color:#6b7280">{{ ea.assessor.organization || '—' }} · Slot {{ ea.assessor_order }}</div>
-                    </div>
-                  </li>
-                </ul>
-              </div>
-              <div v-else>
-                <p class="placeholder-copy">Nog geen beoordelaars toegewezen.</p>
-              </div>
-            </div>
-
-            <div v-else style="display:flex; flex-direction:column; gap:0.6rem; align-items:flex-start; width:100%">
-              <div style="display:flex; gap:0.6rem; width:100%">
-                <label style="flex:1">
-                  <span>Beoordelaar slot 1</span>
-                  <select v-model="editForm.assessor_slot_1">
-                    <option :value="null">— Geen —</option>
-                    <option v-for="a in assessorsOptions" :key="a.id" :value="a.id" :disabled="editForm.assessor_slot_2 && Number(editForm.assessor_slot_2) === a.id">
-                      {{ a.name }}{{ a.organization ? ' · ' + a.organization : '' }}
-                    </option>
-                  </select>
-                </label>
-
-                <label style="flex:1">
-                  <span>Beoordelaar slot 2</span>
-                  <select v-model="editForm.assessor_slot_2">
-                    <option :value="null">— Geen —</option>
-                    <option v-for="a in assessorsOptions" :key="a.id" :value="a.id" :disabled="editForm.assessor_slot_1 && Number(editForm.assessor_slot_1) === a.id">
-                      {{ a.name }}{{ a.organization ? ' · ' + a.organization : '' }}
-                    </option>
-                  </select>
-                </label>
-              </div>
-
-              <p v-if="saveError" class="panel-error">{{ saveError }}</p>
+            <div class="flex w-full gap-[0.6rem]">
+              <label class="flex flex-1 flex-col gap-xs">
+                <span class="text-sm text-text-secondary">Slot 1</span>
+                <select class="w-full min-w-0 rounded-md border border-border bg-surface px-[0.65rem] py-[0.55rem] text-md text-text-primary" :value="getSlotAssessorId(1)" :disabled="assessorActionLoading" @change="onSlotChange(1, $event)">
+                  <option value="">— Geen —</option>
+                  <optgroup v-for="group in assessorsByType" :key="group.label" :label="group.label">
+                    <option v-for="a in group.items" :key="a.id" :value="a.id" :disabled="getSlotAssessorId(2) === a.id">{{ a.name }}{{ a.organization ? ' · ' + a.organization : '' }}</option>
+                  </optgroup>
+                </select>
+              </label>
+              <label class="flex flex-1 flex-col gap-xs">
+                <span class="text-sm text-text-secondary">Slot 2</span>
+                <select class="w-full min-w-0 rounded-md border border-border bg-surface px-[0.65rem] py-[0.55rem] text-md text-text-primary" :value="getSlotAssessorId(2)" :disabled="assessorActionLoading" @change="onSlotChange(2, $event)">
+                  <option value="">— Geen —</option>
+                  <optgroup v-for="group in assessorsByType" :key="group.label" :label="group.label">
+                    <option v-for="a in group.items" :key="a.id" :value="a.id" :disabled="getSlotAssessorId(1) === a.id">{{ a.name }}{{ a.organization ? ' · ' + a.organization : '' }}</option>
+                  </optgroup>
+                </select>
+              </label>
             </div>
           </div>
 
-          <div class="detail-section">
-            <h3>Toegewezen studenten</h3>
-            <p class="placeholder-copy">
-              Deze lijst wordt later toegevoegd zodra studenttoewijzingen beschikbaar zijn.
-            </p>
-            <div class="placeholder-box">
-              <span>Voorbeeld</span>
-              <p>Hier komt een lijst met studenten die aan dit examen zijn gekoppeld.</p>
+          <div>
+            <h3 class="mb-md text-text-primary">Toegewezen studenten</h3>
+
+            <div class="mb-md flex items-center gap-sm">
+              <div class="relative flex-1">
+                <input v-model="studentSearch" placeholder="Zoek student op naam of schoolID..." class="w-full min-w-0 rounded-md border border-border bg-surface px-[0.65rem] py-[0.55rem] text-md text-text-primary" @focus="showSuggestions = true" @blur="hideSuggestions" @input="onSearchInput" @keydown="onSearchKeydown" />
+                <ul v-if="showSuggestions && filteredStudents.length" class="absolute left-0 right-0 top-full z-10 m-0 list-none overflow-y-auto border border-border bg-surface shadow-[0_4px_12px_rgba(0,0,0,0.15)]" style="max-height:200px; border-radius: 0 0 0.5rem 0.5rem;">
+                  <li v-for="(s, i) in filteredStudents" :key="s.id" class="flex cursor-pointer justify-between gap-sm px-[0.55rem] py-[0.45rem] text-md" :class="{ 'bg-gray-100': i === highlightIndex }" @mousedown.prevent="selectStudent(s)" @mouseenter="highlightIndex = i">
+                    <span>{{ s.name }}</span>
+                    <span class="text-sm text-text-secondary">{{ s.student_number }}</span>
+                  </li>
+                </ul>
+                <p v-else-if="showSuggestions && studentSearch && !filteredStudents.length" class="absolute left-0 right-0 top-full z-10 m-0 border border-border bg-surface px-[0.55rem] py-[0.45rem] text-md text-text-secondary shadow-[0_4px_12px_rgba(0,0,0,0.15)]" style="border-radius: 0 0 0.5rem 0.5rem;">
+                  Geen studenten gevonden
+                </p>
+              </div>
+              <button class="cursor-pointer whitespace-nowrap rounded-md border border-border bg-surface px-[0.8rem] py-[0.55rem] font-semibold text-primary transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-65" type="button" style="padding:0.45rem 0.7rem; font-size:0.85rem" :disabled="!linkingStudentId || studentActionLoading" @click="linkStudent">Toevoegen</button>
+            </div>
+
+            <div v-if="selectedExam.exam_students && selectedExam.exam_students.length" class="overflow-x-auto">
+              <table class="w-full border-collapse text-md">
+                <thead>
+                  <tr class="border-b-2 border-b-border-light">
+                    <th class="p-sm text-left font-semibold text-text-secondary">Naam</th>
+                    <th class="p-sm text-left font-semibold text-text-secondary">SchoolID</th>
+                    <th class="p-sm text-left font-semibold text-text-secondary">Opdracht</th>
+                    <th class="p-sm text-left font-semibold text-text-secondary">Resultaat</th>
+                    <th class="p-sm" style="width:40px"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="es in selectedExam.exam_students" :key="es.id" class="border-b border-b-gray-100">
+                    <td class="p-sm font-semibold">{{ es.student.name }}</td>
+                    <td class="p-sm text-text-secondary">{{ es.student.student_number }}</td>
+                    <td class="p-xs p-sm">
+                      <div class="flex items-center gap-[0.4rem]">
+                        <span class="text-sm text-gray-700">—</span>
+                        <button type="button" class="cursor-pointer rounded-[0.4rem] border border-border bg-surface px-[0.5rem] py-[0.25rem] text-sm text-gray-700">Bekijken</button>
+                        <button type="button" class="cursor-pointer whitespace-nowrap rounded-[0.4rem] border border-border bg-surface px-[0.5rem] py-[0.25rem] text-sm text-gray-700">Toewijzen</button>
+                      </div>
+                    </td>
+                    <td class="p-xs p-sm">
+                      <input type="number" step="0.1" min="0" max="10" :value="es.result || ''" @blur="updateStudentField(es.id, 'result', $event.target.value || null)" class="w-full min-w-0 rounded-[0.4rem] border border-border bg-surface px-[0.5rem] py-[0.35rem] text-sm text-text-primary" style="min-width:80px" placeholder="0.0–10.0" />
+                    </td>
+                    <td class="p-sm">
+                      <button type="button" class="cursor-pointer border-none bg-none p-xs text-lg text-error" :disabled="studentActionLoading" @click="unlinkStudent(es.id)">×</button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div v-else>
+              <p class="text-base text-text-secondary">Nog geen studenten toegewezen.</p>
             </div>
           </div>
         </div>
 
-        <div v-else class="detail-empty">
-          <h2>Kies een examen</h2>
-          <p>Selecteer links een examen om de detailinformatie te bekijken.</p>
+        <div v-else class="flex min-h-[420px] flex-col items-start justify-center p-2xl">
+          <h2 class="m-0 text-5xl text-text-primary">Kies een examen</h2>
+          <p class="mt-md text-text-muted">Selecteer links een examen om de detailinformatie te bekijken.</p>
         </div>
       </section>
     </section>
   </main>
 </template>
-
-<style scoped>
-.examens-page {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 2rem;
-}
-
-.examens-hero {
-  display: flex;
-  justify-content: space-between;
-  gap: 1.5rem;
-  align-items: flex-start;
-  margin-bottom: 2rem;
-}
-
-.eyebrow {
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
-  font-size: 0.75rem;
-  color: #6b7280;
-  margin-bottom: 0.5rem;
-}
-
-.examens-hero h1,
-.detail-empty h2 {
-  font-size: 2rem;
-  color: #111827;
-  margin: 0;
-}
-
-.hero-copy {
-  margin-top: 0.75rem;
-  color: #6b7280;
-  max-width: 60ch;
-}
-
-.examens-summary-card {
-  min-width: 180px;
-  padding: 1rem 1.25rem;
-  border-radius: 1rem;
-  background: linear-gradient(135deg, #111827, #374151);
-  color: #fff;
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.summary-label {
-  font-size: 0.85rem;
-  color: rgba(255, 255, 255, 0.75);
-}
-
-.examens-summary-card strong {
-  font-size: 2rem;
-}
-
-.examens-layout {
-  display: grid;
-  grid-template-columns: 360px 1fr;
-  gap: 1.5rem;
-}
-
-.examens-list-panel,
-.examens-detail-panel,
-.detail-card,
-.detail-empty {
-  background: #fff;
-  border-radius: 1rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-}
-
-.examens-list-panel {
-  padding: 1.25rem;
-}
-
-.panel-header {
-  margin-bottom: 1rem;
-}
-
-.panel-header h2 {
-  margin: 0;
-  color: #111827;
-}
-
-.panel-header p,
-.panel-error {
-  margin-top: 0.35rem;
-  color: #6b7280;
-  font-size: 0.9rem;
-}
-
-.panel-error {
-  color: #b91c1c;
-}
-
-.examens-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.exam-card {
-  display: block;
-  padding: 1rem;
-  border-radius: 0.9rem;
-  border: 1px solid #e5e7eb;
-  text-decoration: none;
-  color: inherit;
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
-}
-
-.exam-card:hover,
-.exam-card.active {
-  transform: translateY(-1px);
-  border-color: #9ca3af;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
-}
-
-.exam-card-top {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 0.65rem;
-}
-
-.exam-card-date,
-.exam-card-meta {
-  color: #6b7280;
-  font-size: 0.9rem;
-}
-
-.exam-card h3 {
-  margin: 0;
-  font-size: 1.05rem;
-  color: #111827;
-}
-
-.exam-card-status,
-.detail-status {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.2rem 0.6rem;
-  border-radius: 999px;
-  background: #eef2ff;
-  color: #4338ca;
-  font-size: 0.75rem;
-  text-transform: capitalize;
-}
-
-.examens-detail-panel {
-  padding: 1.25rem;
-}
-
-.detail-card,
-.detail-empty {
-  padding: 1.5rem;
-  min-height: 100%;
-}
-
-.detail-card {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.detail-header {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  align-items: flex-start;
-  margin-bottom: 1.25rem;
-}
-
-.detail-header h2 {
-  margin: 0;
-  font-size: 1.8rem;
-  color: #111827;
-}
-
-.detail-actions {
-  display: flex;
-  gap: 0.75rem;
-  align-items: center;
-}
-
-.detail-actions .actions {
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-}
-
-.detail-grid,
-.edit-form {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1rem;
-}
-
-.edit-form label {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.edit-form input,
-.edit-form select {
-  width: 100%;
-  min-width: 0;
-  border: 1px solid #d1d5db;
-  border-radius: 0.5rem;
-  padding: 0.55rem 0.65rem;
-  background: #fff;
-  color: #111827;
-  font-size: 0.95rem;
-}
-
-.detail-item {
-  padding: 0.95rem 1rem;
-  border-radius: 0.85rem;
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-}
-
-.detail-item span,
-.placeholder-copy,
-.edit-form label span {
-  color: #6b7280;
-  font-size: 0.9rem;
-}
-
-.detail-item strong {
-  color: #111827;
-  font-size: 1rem;
-}
-
-.detail-section h3 {
-  margin: 0 0 0.75rem;
-  color: #111827;
-}
-
-.placeholder-box {
-  border: 1px dashed #cbd5e1;
-  border-radius: 0.85rem;
-  padding: 1rem;
-  background: #f8fafc;
-}
-
-.placeholder-box span {
-  display: inline-flex;
-  margin-bottom: 0.5rem;
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: #64748b;
-}
-
-.placeholder-box p,
-.detail-empty p {
-  margin: 0;
-  color: #475569;
-}
-
-.detail-empty {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: flex-start;
-  min-height: 420px;
-}
-
-@media (max-width: 960px) {
-  .examens-hero,
-  .examens-layout {
-    grid-template-columns: 1fr;
-    display: grid;
-  }
-
-  .examens-hero {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .detail-header,
-  .detail-actions,
-  .detail-actions .actions {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .detail-grid,
-  .edit-form {
-    grid-template-columns: 1fr;
-  }
-}
-</style>

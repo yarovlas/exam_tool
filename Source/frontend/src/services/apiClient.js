@@ -1,4 +1,4 @@
-import { getRawToken } from './authStore'
+import { getRawToken, clearAuth } from './authStore'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000/api'
 
@@ -39,6 +39,12 @@ export async function request(path, options = {}) {
   })
 
   if (!response.ok) {
+    if (response.status === 401) {
+      clearAuth()
+      window.location.href = '/inloggen'
+      throw new Error('Sessie verlopen. U wordt doorgestuurd naar de inlogpagina.')
+    }
+
     throw new Error(await readError(response))
   }
 
