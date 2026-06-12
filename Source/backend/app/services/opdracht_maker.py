@@ -20,6 +20,16 @@ class ProgramRules:
     choice_groups: tuple[ProductGroupRule, ...]
 
 
+PROGRAM_CODE_ALIASES: dict[str, str] = {
+    "PAT": "ZWBB",
+    "ZWB": "ZWBB",
+}
+
+
+def resolve_program_code(code: str) -> str:
+    return PROGRAM_CODE_ALIASES.get(code.upper(), code.upper())
+
+
 PROGRAM_RULES: dict[str, ProgramRules] = {
     "ZWBA": ProgramRules(
         program_code="ZWBA",

@@ -12,7 +12,7 @@ class ProductCreate(BaseModel):
     speciality_name: Optional[str] = Field(default=None, max_length=255)
     name: str = Field(min_length=1, max_length=255)
     category: Optional[str] = Field(default=None, max_length=100)
-    stars: Optional[int] = Field(default=None, ge=0)
+    stars: int = Field(default=0, ge=0)
     document_link: Optional[str] = None
 
 
@@ -25,7 +25,7 @@ class ProductRead(BaseModel):
     speciality_name: Optional[str]
     name: str
     category: Optional[str]
-    stars: Optional[int]
+    stars: int
     document_link: Optional[str]
     created_at: datetime
     updated_at: datetime

@@ -19,7 +19,7 @@ class AssignmentProduct(Base):
     product_role: Mapped[str] = mapped_column(String(50), nullable=False)
     product_order: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     product_text: Mapped[Optional[str]] = mapped_column(Text)
-    stars: Mapped[Optional[int]] = mapped_column(Integer)
+    stars: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     result: Mapped[Optional[str]] = mapped_column(String(50))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
