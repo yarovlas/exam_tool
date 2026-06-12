@@ -77,7 +77,7 @@ class OpdrachtMakerCalculateRead(BaseModel):
 
 
 class OpdrachtMakerCreateRequest(OpdrachtMakerCalculateRequest):
-    status: Literal["draft", "confirmed"] = "draft"
+    status: Literal["confirmed"] = "confirmed"
     allow_reuse: bool = False
     replace_existing: bool = False
 

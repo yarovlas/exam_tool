@@ -445,7 +445,7 @@ class TestCreate:
         assert resp.status_code == 201, resp.text
         data = resp.json()
 
-        assert data["assignment"]["status"] == "draft"
+        assert data["assignment"]["status"] == "confirmed"
         assert data["assignment"]["regular_stars"] == 9
         assert data["assignment"]["total_stars"] == 12
         # Moet 4 assignment-producten hebben (3 regular/choice + 1 surprise)
@@ -681,7 +681,7 @@ def _make_assignment_with_placeholder(
     db: Session,
     exam_student: ExamStudent,
     p1, p2, p3,
-    status: str = "draft",
+    status: str = "confirmed",
 ) -> int:
     """Create an assignment with required+choice but NO surprise (creates placeholder)."""
     assignment = Assignment(
@@ -935,7 +935,7 @@ class TestAutoAssignSurprises:
         p5 = make_product(db, "Taart 2*", "UBB", "Gebak en taarten UBB & UBA", stars=2)
         assignment2 = Assignment(
             exam_student_id=es2.id,
-            status="draft",
+            status="confirmed",
             regular_stars=p4.stars + p5.stars,
             required_stars=3,
             total_stars=8,
