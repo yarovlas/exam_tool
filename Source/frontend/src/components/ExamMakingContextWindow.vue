@@ -40,6 +40,24 @@ const form = reactive({
 const assessorsOptions = ref([])
 const localError = ref('')
 
+const assessorTypeLabels = {
+  teacher: 'Interne',
+  external: 'Externe',
+}
+
+const assessorsByType = computed(() => {
+  const groups = {}
+  for (const a of assessorsOptions.value) {
+    const type = a.assessor_type || 'other'
+    if (!groups[type]) groups[type] = []
+    groups[type].push(a)
+  }
+  return Object.entries(groups).map(([type, items]) => ({
+    label: assessorTypeLabels[type] || type,
+    items,
+  }))
+})
+
 const modeText = computed(() => {
   if (props.mode === 'calendar') {
     return 'Datum is automatisch ingevuld op basis van je kalenderselectie.'
@@ -214,9 +232,11 @@ const submitForm = () => {
           <span class="text-sm font-semibold text-gray-700">Beoordelaar slot 1</span>
           <select v-model="form.assessor_slot_1" class="w-full min-w-0 rounded-md border border-border bg-surface px-[0.75rem] py-[0.65rem] text-md">
             <option :value="null">— Geen —</option>
-            <option v-for="a in assessorsOptions" :key="a.id" :value="a.id" :disabled="form.assessor_slot_2 && Number(form.assessor_slot_2) === a.id">
-              {{ a.name }}{{ a.organization ? ' · ' + a.organization : '' }}
-            </option>
+            <optgroup v-for="group in assessorsByType" :key="group.label" :label="group.label">
+              <option v-for="a in group.items" :key="a.id" :value="a.id" :disabled="form.assessor_slot_2 && Number(form.assessor_slot_2) === a.id">
+                {{ a.name }}{{ a.organization ? ' · ' + a.organization : '' }}
+              </option>
+            </optgroup>
           </select>
         </label>
 
@@ -224,9 +244,11 @@ const submitForm = () => {
           <span class="text-sm font-semibold text-gray-700">Beoordelaar slot 2</span>
           <select v-model="form.assessor_slot_2" class="w-full min-w-0 rounded-md border border-border bg-surface px-[0.75rem] py-[0.65rem] text-md">
             <option :value="null">— Geen —</option>
-            <option v-for="a in assessorsOptions" :key="a.id" :value="a.id" :disabled="form.assessor_slot_1 && Number(form.assessor_slot_1) === a.id">
-              {{ a.name }}{{ a.organization ? ' · ' + a.organization : '' }}
-            </option>
+            <optgroup v-for="group in assessorsByType" :key="group.label" :label="group.label">
+              <option v-for="a in group.items" :key="a.id" :value="a.id" :disabled="form.assessor_slot_1 && Number(form.assessor_slot_1) === a.id">
+                {{ a.name }}{{ a.organization ? ' · ' + a.organization : '' }}
+              </option>
+            </optgroup>
           </select>
         </label>
 

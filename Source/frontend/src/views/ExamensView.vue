@@ -72,6 +72,24 @@ const editForm = reactive({
 const assessorsOptions = ref([])
 const studentsOptions = ref([])
 
+const assessorTypeLabels = {
+  teacher: 'Interne',
+  external: 'Externe',
+}
+
+const assessorsByType = computed(() => {
+  const groups = {}
+  for (const a of assessorsOptions.value) {
+    const type = a.assessor_type || 'other'
+    if (!groups[type]) groups[type] = []
+    groups[type].push(a)
+  }
+  return Object.entries(groups).map(([type, items]) => ({
+    label: assessorTypeLabels[type] || type,
+    items,
+  }))
+})
+
 watch(selectedExam, (exam) => {
   isEditing.value = false
   saveError.value = ''
@@ -483,14 +501,18 @@ const unlinkAssessor = async (examAssessorId) => {
                 <span class="text-sm text-text-secondary">Slot 1</span>
                 <select class="w-full min-w-0 rounded-md border border-border bg-surface px-[0.65rem] py-[0.55rem] text-md text-text-primary" :value="getSlotAssessorId(1)" :disabled="assessorActionLoading" @change="onSlotChange(1, $event)">
                   <option value="">— Geen —</option>
-                  <option v-for="a in assessorsOptions" :key="a.id" :value="a.id" :disabled="getSlotAssessorId(2) === a.id">{{ a.name }}{{ a.organization ? ' · ' + a.organization : '' }}</option>
+                  <optgroup v-for="group in assessorsByType" :key="group.label" :label="group.label">
+                    <option v-for="a in group.items" :key="a.id" :value="a.id" :disabled="getSlotAssessorId(2) === a.id">{{ a.name }}{{ a.organization ? ' · ' + a.organization : '' }}</option>
+                  </optgroup>
                 </select>
               </label>
               <label class="flex flex-1 flex-col gap-xs">
                 <span class="text-sm text-text-secondary">Slot 2</span>
                 <select class="w-full min-w-0 rounded-md border border-border bg-surface px-[0.65rem] py-[0.55rem] text-md text-text-primary" :value="getSlotAssessorId(2)" :disabled="assessorActionLoading" @change="onSlotChange(2, $event)">
                   <option value="">— Geen —</option>
-                  <option v-for="a in assessorsOptions" :key="a.id" :value="a.id" :disabled="getSlotAssessorId(1) === a.id">{{ a.name }}{{ a.organization ? ' · ' + a.organization : '' }}</option>
+                  <optgroup v-for="group in assessorsByType" :key="group.label" :label="group.label">
+                    <option v-for="a in group.items" :key="a.id" :value="a.id" :disabled="getSlotAssessorId(1) === a.id">{{ a.name }}{{ a.organization ? ' · ' + a.organization : '' }}</option>
+                  </optgroup>
                 </select>
               </label>
             </div>

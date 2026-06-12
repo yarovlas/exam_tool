@@ -5,6 +5,7 @@ import ExamMakingContextWindow from '../components/ExamMakingContextWindow.vue'
 import { eventTypes, examStatusLabels } from '../constants/dashboard'
 import { useCalendar } from '../composables/useCalendar'
 import { createExamPlanning, listExamPlanning } from '../services/examPlanningApi'
+import { listStudents } from '../services/studentsApi'
 
 const { calendarDays, currentDate, monthYear, nextMonth, previousMonth } = useCalendar()
 
@@ -16,6 +17,7 @@ const examPlanningLoading = ref(false)
 const examPlanningError = ref('')
 const saveExamLoading = ref(false)
 const saveExamError = ref('')
+const totalStudents = ref(0)
 
 const eventTypesByValue = Object.fromEntries(eventTypes.map((type) => [type.value, type]))
 
@@ -84,6 +86,15 @@ const loadExamPlanning = async () => {
   }
 }
 
+const loadStudents = async () => {
+  try {
+    const students = await listStudents()
+    totalStudents.value = students.length
+  } catch (error) {
+    totalStudents.value = 0
+  }
+}
+
 const examPlanningByDate = computed(() => {
   const grouped = new Map()
 
@@ -131,10 +142,12 @@ const submitExamPlanning = async (payload) => {
 }
 
 const totalExamens = computed(() => examPlanningItems.value.length)
+
 const upcomingExamens = computed(() => examPlanningItems.value.slice(0, 5))
 
 onMounted(() => {
   loadExamPlanning()
+  loadStudents()
 })
 </script>
 
@@ -149,9 +162,9 @@ onMounted(() => {
 
         <div class="rounded-lg bg-surface p-3xl shadow-sidebar">
           <div class="mb-3xl flex items-center justify-between">
-            <button class="cursor-pointer rounded-sm border-none bg-none px-sm py-sm text-2xl text-text-light transition-all duration-300 hover:bg-gray-100 hover:text-heading" @click="previousMonth">←</button>
+            <button class="cursor-pointer rounded-sm border-none bg-none px-sm py-sm text-2xl text-text-light hover:bg-gray-100 hover:text-heading" @click="previousMonth">←</button>
             <h2 class="text-3xl capitalize text-heading">{{ monthYear }}</h2>
-            <button class="cursor-pointer rounded-sm border-none bg-none px-sm py-sm text-2xl text-text-light transition-all duration-300 hover:bg-gray-100 hover:text-heading" @click="nextMonth">→</button>
+            <button class="cursor-pointer rounded-sm border-none bg-none px-sm py-sm text-2xl text-text-light hover:bg-gray-100 hover:text-heading" @click="nextMonth">→</button>
           </div>
 
           <div class="mb-lg grid grid-cols-7 gap-md">
@@ -162,7 +175,7 @@ onMounted(() => {
             <div
               v-for="(day, index) in calendarDays"
               :key="index"
-              class="relative flex aspect-square items-center justify-center rounded-sm transition-all duration-300"
+              class="relative flex aspect-square items-center justify-center rounded-sm transition-transform duration-300"
               :class="day ? 'cursor-pointer border border-[#e8e8e8] bg-[#f9f9f9] hover:scale-105 hover:shadow-[0_4px_12px_rgba(0,0,0,0.1)]' : 'cursor-default border-none bg-transparent'"
               @click="openExamContextFromCalendar(day)"
             >
@@ -173,7 +186,7 @@ onMounted(() => {
                   <RouterLink
                     v-for="exam in getExamPlanningForDay(day)"
                     :key="exam.id"
-                    class="inline-flex flex-none rounded-full border-2 border-white/90 transition-all duration-300 hover:scale-120 hover:shadow-[0_4px_12px_rgba(0,0,0,0.15)]"
+                    class="inline-flex flex-none rounded-full border-2 border-white/90 transition-transform duration-300 hover:scale-120 hover:shadow-[0_4px_12px_rgba(0,0,0,0.15)]"
                     :to="{ path: '/examens', query: { exam: exam.id } }"
                     :style="{ backgroundColor: eventTypesByValue[exam.exam_type]?.color, width: '1.3rem', height: '1.3rem' }"
                     :title="getExamTooltip(exam)"
@@ -187,7 +200,7 @@ onMounted(() => {
       </section>
 
       <aside class="flex flex-col gap-2xl">
-        <div class="rounded-lg bg-surface p-2xl shadow-sidebar">
+        <div class="rounded-lg bg-surface p-2xl shadow-sidebar min-h-[280px]">
           <h3 class="mb-md text-lg font-semibold text-heading">Komende Examens</h3>
           <p v-if="examPlanningLoading" class="text-sm text-[#999]">Laden...</p>
           <p v-else-if="examPlanningError" class="text-sm text-error">{{ examPlanningError }}</p>
@@ -196,7 +209,7 @@ onMounted(() => {
             <RouterLink
               v-for="exam in upcomingExamens"
               :key="exam.id"
-              class="block rounded-md border border-border-lighter px-[0.65rem] py-[0.65rem] text-inherit no-underline transition-all duration-200 hover:translate-y-[-1px] hover:border-[#c7d2fe] hover:shadow-[0_8px_20px_rgba(15,23,42,0.08)] focus-visible:outline-none"
+              class="block rounded-md border border-border-lighter px-[0.65rem] py-[0.65rem] text-inherit no-underline transition-shadow duration-200 hover:translate-y-[-1px] hover:border-[#c7d2fe] hover:shadow-[0_8px_20px_rgba(15,23,42,0.08)] focus-visible:outline-none"
               :to="{ path: '/examens', query: { exam: exam.id } }"
               :title="getExamTooltip(exam)"
               :aria-label="getExamTooltip(exam)"
@@ -208,12 +221,12 @@ onMounted(() => {
           </div>
         </div>
 
-        <div class="rounded-lg bg-surface p-2xl shadow-sidebar">
+        <div class="rounded-lg bg-surface p-2xl shadow-sidebar min-h-[100px]">
           <h3 class="mb-md text-lg font-semibold text-heading">Statistieken</h3>
           <div class="flex flex-col gap-md">
             <div class="flex justify-between text-sm text-text-light">
               <span>Totaal studenten:</span>
-              <span>--</span>
+              <span>{{ totalStudents }}</span>
             </div>
             <div class="flex justify-between text-sm text-text-light">
               <span>Totaal examens:</span>

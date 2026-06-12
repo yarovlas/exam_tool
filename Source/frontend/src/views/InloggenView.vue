@@ -58,7 +58,7 @@ const submitLogin = async () => {
 
           <label class="flex flex-col gap-[0.4rem]">
             <span class="text-sm font-semibold text-gray-700">Wachtwoord</span>
-            <input v-model="password" type="password" class="w-full min-w-0 rounded-md border border-border bg-surface px-[0.75rem] py-[0.7rem] text-md focus:border-brand focus:outline-none" />
+            <input v-model="password" type="password" class="w-full min-w-0 rounded-md border border-border bg-surface px-[0.75rem] py-[0.7rem] text-md focus:border-brand focus:outline-none" @keydown.enter="submitLogin" />
           </label>
 
           <p v-if="loginError" class="text-sm text-error">

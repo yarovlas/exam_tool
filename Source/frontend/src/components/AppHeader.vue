@@ -29,8 +29,8 @@ const visibleNavItems = computed(() => {
           v-for="item in visibleNavItems"
           :key="item.label"
           :to="item.to"
-          class="inline-flex cursor-pointer items-center rounded-full border-none bg-none px-lg py-sm text-md text-text-light no-underline transition-all duration-300"
-          :class="$route.path === item.to || ($route.path.startsWith(item.to) && item.to !== '/') ? 'bg-brand-light text-brand' : 'hover:bg-brand-light hover:text-brand'"
+           class="inline-flex cursor-pointer items-center rounded-full border-none bg-none px-lg py-sm text-md text-text-light no-underline transition-colors duration-300"
+              :class="$route.path === item.to || ($route.path.startsWith(item.to) && item.to !== '/') ? 'bg-brand-light text-brand' : 'hover:bg-brand-light hover:text-brand'"
         >
           {{ item.label }}
         </RouterLink>
