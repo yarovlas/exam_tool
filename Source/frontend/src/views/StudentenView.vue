@@ -1,7 +1,6 @@
 <script setup>
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { listStudents, createStudent, updateStudent, deleteStudent } from '../services/studentsApi'
-
 const students = ref([])
 const loading = ref(false)
 const error = ref('')
@@ -33,6 +32,19 @@ const placementGroups = computed(() => {
   const items = new Set(students.value.map(s => s.placement_group).filter(Boolean))
   return [...items].sort()
 })
+
+const getStudentBadgeStyle = (programCode) => {
+  if (!programCode) return {}
+  let hash = 5381
+  for (let i = 0; i < programCode.length; i++) {
+    hash = ((hash << 5) + hash) + programCode.charCodeAt(i)
+  }
+  const hue = ((Math.abs(hash) * 2654435761) >>> 0) % 360
+  return {
+    backgroundColor: `hsl(${hue}, 55%, 92%)`,
+    color: `hsl(${hue}, 60%, 30%)`,
+  }
+}
 
 const filteredStudents = computed(() => {
   const search = q.value.trim().toLowerCase()
@@ -100,6 +112,14 @@ watch(q, (value) => {
 })
 
 watch([filterProgram, filterPhase, filterPlacement, q], syncSelection)
+
+watch(() => createForm.student_number, (value) => {
+  if (value) createForm.email = `${value}@student.talland.nl`
+})
+
+watch(() => editForm.student_number, (value) => {
+  if (value) editForm.email = `${value}@student.talland.nl`
+})
 
 const openCreate = () => {
   isCreating.value = true
@@ -237,7 +257,7 @@ const confirmDelete = async () => {
           >
             <div class="mb-[0.65rem] flex justify-between gap-lg">
               <span class="text-base text-text-secondary">{{ s.student_number }}</span>
-              <span class="inline-flex items-center justify-center rounded-full bg-badge-bg px-[0.6rem] py-[0.2rem] text-xs capitalize text-badge-text">{{ s.program_code }} · {{ s.phase }}</span>
+              <span class="inline-flex items-center justify-center rounded-full bg-badge-bg px-[0.6rem] py-[0.2rem] text-xs capitalize text-badge-text" :style="getStudentBadgeStyle(s.program_code)">{{ s.program_code }} · {{ s.phase }}</span>
             </div>
 
             <h3 class="m-0 text-lg text-text-primary">{{ s.name }}</h3>
@@ -275,12 +295,18 @@ const confirmDelete = async () => {
 
             <label class="flex flex-col gap-xs">
               <span class="text-base text-text-secondary">Opleiding</span>
-              <input v-model.trim="createForm.program_code" type="text" class="w-full min-w-0 rounded-md border border-border bg-surface px-[0.65rem] py-[0.55rem] text-md text-text-primary" />
+              <select v-model="createForm.program_code" class="w-full min-w-0 rounded-md border border-border bg-surface px-[0.65rem] py-[0.55rem] text-md text-text-primary">
+                <option value="">— Kies —</option>
+                <option v-for="code in programCodes" :key="code" :value="code">{{ code }}</option>
+              </select>
             </label>
 
             <label class="flex flex-col gap-xs">
               <span class="text-base text-text-secondary">Fase</span>
-              <input v-model.trim="createForm.phase" type="text" class="w-full min-w-0 rounded-md border border-border bg-surface px-[0.65rem] py-[0.55rem] text-md text-text-primary" />
+              <select v-model="createForm.phase" class="w-full min-w-0 rounded-md border border-border bg-surface px-[0.65rem] py-[0.55rem] text-md text-text-primary">
+                <option value="">— Kies —</option>
+                <option v-for="phase in phases" :key="phase" :value="phase">{{ phase }}</option>
+              </select>
             </label>
 
             <label class="flex flex-col gap-xs">
@@ -355,12 +381,18 @@ const confirmDelete = async () => {
 
               <label class="flex flex-col gap-xs">
                 <span class="text-base text-text-secondary">Opleiding</span>
-                <input v-model.trim="editForm.program_code" type="text" class="w-full min-w-0 rounded-md border border-border bg-surface px-[0.65rem] py-[0.55rem] text-md text-text-primary" />
+                <select v-model="editForm.program_code" class="w-full min-w-0 rounded-md border border-border bg-surface px-[0.65rem] py-[0.55rem] text-md text-text-primary">
+                  <option value="">— Kies —</option>
+                  <option v-for="code in programCodes" :key="code" :value="code">{{ code }}</option>
+                </select>
               </label>
 
               <label class="flex flex-col gap-xs">
                 <span class="text-base text-text-secondary">Fase</span>
-                <input v-model.trim="editForm.phase" type="text" class="w-full min-w-0 rounded-md border border-border bg-surface px-[0.65rem] py-[0.55rem] text-md text-text-primary" />
+                <select v-model="editForm.phase" class="w-full min-w-0 rounded-md border border-border bg-surface px-[0.65rem] py-[0.55rem] text-md text-text-primary">
+                  <option value="">— Kies —</option>
+                  <option v-for="phase in phases" :key="phase" :value="phase">{{ phase }}</option>
+                </select>
               </label>
 
               <label class="flex flex-col gap-xs">

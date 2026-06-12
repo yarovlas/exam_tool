@@ -302,6 +302,13 @@ const onSearchKeydown = (e) => {
 }
 
 const updateStudentField = async (examStudentId, field, value) => {
+  if (field === 'result' && value !== null) {
+    const num = parseFloat(value)
+    if (Number.isNaN(num) || num < 0 || num > 10) {
+      return
+    }
+  }
+
   try {
     await updateExamStudent(examStudentId, { [field]: value })
     await loadExamPlanning()
@@ -560,7 +567,7 @@ const unlinkAssessor = async (examAssessorId) => {
                       </div>
                     </td>
                     <td class="p-xs p-sm">
-                      <input type="text" :value="es.result || ''" @blur="updateStudentField(es.id, 'result', $event.target.value || null)" class="w-full min-w-0 rounded-[0.4rem] border border-border bg-surface px-[0.5rem] py-[0.35rem] text-sm text-text-primary" style="min-width:80px" placeholder="—" />
+                      <input type="number" step="0.1" min="0" max="10" :value="es.result || ''" @blur="updateStudentField(es.id, 'result', $event.target.value || null)" class="w-full min-w-0 rounded-[0.4rem] border border-border bg-surface px-[0.5rem] py-[0.35rem] text-sm text-text-primary" style="min-width:80px" placeholder="0.0–10.0" />
                     </td>
                     <td class="p-sm">
                       <button type="button" class="cursor-pointer border-none bg-none p-xs text-lg text-error" :disabled="studentActionLoading" @click="unlinkStudent(es.id)">×</button>
