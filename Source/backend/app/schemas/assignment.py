@@ -8,7 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 class AssignmentCreate(BaseModel):
     exam_student_id: int
-    status: AssignmentStatus = "draft"
+    status: AssignmentStatus = "confirmed"
     regular_stars: int = Field(default=0, ge=0)
     required_stars: int = Field(default=0, ge=0)
     total_stars: int = Field(default=0, ge=0)

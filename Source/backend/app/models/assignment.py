@@ -6,7 +6,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.exam_planning import Base
 
-AssignmentStatus = Literal["draft", "confirmed", "completed", "cancelled"]
+AssignmentStatus = Literal["confirmed", "completed", "cancelled"]
 
 
 class Assignment(Base):
@@ -17,7 +17,7 @@ class Assignment(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     exam_student_id: Mapped[int] = mapped_column(ForeignKey("exam_students.id", ondelete="CASCADE"))
-    status: Mapped[str] = mapped_column(String(30), nullable=False, default="draft")
+    status: Mapped[str] = mapped_column(String(30), nullable=False, default="confirmed")
     regular_stars: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     required_stars: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     total_stars: Mapped[int] = mapped_column(Integer, nullable=False, default=0)

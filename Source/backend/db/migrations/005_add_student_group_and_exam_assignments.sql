@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS exam_assessors (
 CREATE TABLE IF NOT EXISTS assignments (
     id BIGSERIAL PRIMARY KEY,
     exam_student_id BIGINT NOT NULL REFERENCES exam_students(id) ON DELETE CASCADE,
-    status VARCHAR(30) NOT NULL DEFAULT 'draft',
+    status VARCHAR(30) NOT NULL DEFAULT 'confirmed',
     regular_stars INTEGER NOT NULL DEFAULT 0,
     required_stars INTEGER NOT NULL DEFAULT 0,
     total_stars INTEGER NOT NULL DEFAULT 0,
@@ -57,7 +57,7 @@ CREATE TABLE IF NOT EXISTS assignments (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT assignments_status_check
-        CHECK (status IN ('draft', 'confirmed', 'completed', 'cancelled')),
+        CHECK (status IN ('confirmed', 'completed', 'cancelled')),
     CONSTRAINT assignments_regular_stars_check CHECK (regular_stars >= 0),
     CONSTRAINT assignments_required_stars_check CHECK (required_stars >= 0),
     CONSTRAINT assignments_total_stars_check CHECK (total_stars >= 0),
