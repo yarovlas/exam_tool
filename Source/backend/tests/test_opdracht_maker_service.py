@@ -7,10 +7,42 @@ Tests worden uitgevoerd zonder database — alleen pure Python logica.
 import pytest
 from app.services.opdracht_maker import (
     PROGRAM_RULES,
+    PROGRAM_CODE_ALIASES,
     ProgramRules,
     get_program_rules,
     get_star_norms,
+    resolve_program_code,
 )
+
+
+# ---------------------------------------------------------------------------
+# resolve_program_code
+# ---------------------------------------------------------------------------
+
+
+class TestResolveProgramCode:
+    def test_pat_resolves_to_zwbb(self):
+        assert resolve_program_code("PAT") == "ZWBB"
+
+    def test_zwb_resolves_to_zwbb(self):
+        assert resolve_program_code("ZWB") == "ZWBB"
+
+    def test_pat_lowercase_resolves(self):
+        assert resolve_program_code("pat") == "ZWBB"
+
+    def test_known_code_returns_itself(self):
+        for code in ("ZWBA", "ZWBB", "ZWBR", "UBA", "UBR", "UBB"):
+            assert resolve_program_code(code) == code
+
+    def test_known_code_lowercase_returns_uppercase(self):
+        assert resolve_program_code("zwba") == "ZWBA"
+
+    def test_unknown_code_returns_uppercased(self):
+        assert resolve_program_code("xyz") == "XYZ"
+
+    def test_aliases_map_to_zwbb(self):
+        for alias in PROGRAM_CODE_ALIASES:
+            assert PROGRAM_CODE_ALIASES[alias] == "ZWBB"
 
 
 # ---------------------------------------------------------------------------

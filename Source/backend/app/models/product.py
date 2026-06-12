@@ -18,7 +18,7 @@ class Product(Base):
     speciality_name: Mapped[Optional[str]] = mapped_column(String(255))
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     category: Mapped[Optional[str]] = mapped_column(String(100))
-    stars: Mapped[Optional[int]] = mapped_column(Integer)
+    stars: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     document_link: Mapped[Optional[str]] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)

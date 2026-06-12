@@ -1,3 +1,5 @@
+import random
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -9,6 +11,7 @@ from app.models.assignment_product import AssignmentProduct
 from app.models.exam_planning import ExamPlanning
 from app.models.exam_student import ExamStudent
 from app.models.product import Product
+
 from app.schemas.opdracht_maker import (
     OpdrachtMakerCalculateRead,
     OpdrachtMakerCalculateRequest,
@@ -20,8 +23,12 @@ from app.schemas.opdracht_maker import (
     OpdrachtMakerProductGroupRead,
     OpdrachtMakerSelection,
     OpdrachtMakerStudentRead,
+    SurpriseAutoAssignItem,
+    SurpriseAutoAssignRequest,
+    SurpriseAutoAssignSummary,
 )
-from app.services.opdracht_maker import ProductGroupRule, get_program_rules, get_star_norms
+from app.schemas.product import ProductRead
+from app.services.opdracht_maker import ProductGroupRule, get_program_rules, get_star_norms, resolve_program_code
 
 router = APIRouter(prefix="/opdracht-maker", tags=["opdracht-maker"])
 
@@ -128,14 +135,6 @@ def get_rule_for_selection(rules, selection: OpdrachtMakerSelection) -> ProductG
             None,
         )
 
-    # FIX: choice-sloten hebben altijd order=1, maar we zoeken op category (niet op None)
-    # zodat we straks ook de category kunnen valideren
-    if selection.product_role == "choice":
-        return next(
-            (group for group in rules.choice_groups if group.category is not None),
-            None,
-        )
-
     return None
 
 
@@ -144,8 +143,8 @@ def validate_selection(
     selections: list[OpdrachtMakerSelection],
     products_by_id: dict[int, Product],
 ) -> None:
-    rules = get_rules_or_422(exam_student.student.program_code)
-    program_code = exam_student.student.program_code
+    program_code = resolve_program_code(exam_student.student.program_code)
+    rules = get_rules_or_422(program_code)
     seen_ids: set[int] = set()
     seen_slots: set[tuple[str, int]] = set()
 
@@ -240,22 +239,20 @@ def calculate_opdracht(
     products_by_id: dict[int, Product],
     db: Session,
 ) -> OpdrachtMakerCalculateRead:
-    program_code = exam_student.student.program_code
+    program_code = resolve_program_code(exam_student.student.program_code)
     phase = exam_student.phase or exam_student.student.phase
     min_regular_stars, min_total_stars = get_star_norms(program_code, phase)
 
     regular_stars = sum(
-        products_by_id[selection.product_id].stars or 0
+        products_by_id[selection.product_id].stars
         for selection in selections
         if selection.product_role in {"required", "choice"}
     )
 
-    # FIX: gebruik een expliciete vlag i.p.v. sterren-som om te detecteren of een
-    # surprise-product is geselecteerd. Een 0-sterren surprise telt ook mee.
     surprise_selections = [s for s in selections if s.product_role == "surprise"]
     has_selected_surprise = len(surprise_selections) > 0
     selected_surprise_stars = sum(
-        products_by_id[selection.product_id].stars or 0
+        products_by_id[selection.product_id].stars
         for selection in surprise_selections
     )
 
@@ -312,7 +309,7 @@ def calculate_opdracht(
 @router.get("/context/{exam_student_id}", response_model=OpdrachtMakerContextRead)
 def get_opdracht_maker_context(exam_student_id: int, db: Session = Depends(get_db)) -> OpdrachtMakerContextRead:
     exam_student = get_exam_student_or_404(exam_student_id, db)
-    program_code = exam_student.student.program_code
+    program_code = resolve_program_code(exam_student.student.program_code)
     phase = exam_student.phase or exam_student.student.phase
     rules = get_rules_or_422(program_code)
     min_regular_stars, min_total_stars = get_star_norms(program_code, phase)
@@ -371,7 +368,7 @@ def get_opdracht_maker_context_by_exam_student(
             detail="Student is not linked to this exam",
         )
 
-    program_code = exam_student.student.program_code
+    program_code = resolve_program_code(exam_student.student.program_code)
     phase = exam_student.phase or exam_student.student.phase
     rules = get_rules_or_422(program_code)
     min_regular_stars, min_total_stars = get_star_norms(program_code, phase)
@@ -520,3 +517,196 @@ def create_opdracht_from_maker(
         assignment_products=assignment_products,
         calculation=calculation,
     )
+
+
+@router.post("/batch/auto-assign-surprises", response_model=SurpriseAutoAssignSummary)
+def auto_assign_surprises(
+    payload: SurpriseAutoAssignRequest,
+    db: Session = Depends(get_db),
+) -> SurpriseAutoAssignSummary:
+    exam_students_query = select(ExamStudent).where(
+        ExamStudent.exam_planning_id == payload.exam_planning_id,
+    )
+
+    if payload.exam_student_ids is not None:
+        exam_students_query = exam_students_query.where(
+            ExamStudent.id.in_(payload.exam_student_ids),
+        )
+
+    exam_students = list(db.execute(exam_students_query.order_by(ExamStudent.id)).scalars().all())
+
+    summary = SurpriseAutoAssignSummary(
+        total=len(exam_students),
+        updated=0,
+        skipped_no_assignment=0,
+        skipped_already_assigned=0,
+        skipped_no_match=0,
+        errors=[],
+        results=[],
+    )
+
+    for exam_student in exam_students:
+        student = exam_student.student
+        assignment = db.execute(
+            select(Assignment).where(Assignment.exam_student_id == exam_student.id)
+        ).scalars().first()
+
+        if assignment is None:
+            summary.skipped_no_assignment += 1
+            summary.results.append(SurpriseAutoAssignItem(
+                exam_student_id=exam_student.id,
+                student_name=student.name,
+                student_number=student.student_number,
+                program_code=student.program_code,
+                phase=exam_student.phase or student.phase,
+                assignment_id=0,
+                required_stars=0,
+                regular_stars=0,
+                skipped_reason="Geen assignment gevonden",
+            ))
+            continue
+
+        surprise_slot = db.execute(
+            select(AssignmentProduct)
+            .where(
+                AssignmentProduct.assignment_id == assignment.id,
+                AssignmentProduct.product_role == "surprise",
+            )
+        ).scalars().first()
+
+        if surprise_slot is None:
+            summary.skipped_no_assignment += 1
+            summary.results.append(SurpriseAutoAssignItem(
+                exam_student_id=exam_student.id,
+                student_name=student.name,
+                student_number=student.student_number,
+                program_code=student.program_code,
+                phase=exam_student.phase or student.phase,
+                assignment_id=assignment.id,
+                required_stars=assignment.required_stars,
+                regular_stars=assignment.regular_stars,
+                skipped_reason="Geen surprise-slot in assignment",
+            ))
+            continue
+
+        if surprise_slot.product_id is not None:
+            summary.skipped_already_assigned += 1
+            summary.results.append(SurpriseAutoAssignItem(
+                exam_student_id=exam_student.id,
+                student_name=student.name,
+                student_number=student.student_number,
+                program_code=student.program_code,
+                phase=exam_student.phase or student.phase,
+                assignment_id=assignment.id,
+                required_stars=assignment.required_stars,
+                regular_stars=assignment.regular_stars,
+                skipped_reason="Surprise al toegewezen",
+            ))
+            continue
+
+        # --- Bereken regular_stars opnieuw uit de database ---
+        ap_rows = list(db.execute(
+            select(AssignmentProduct)
+            .where(
+                AssignmentProduct.assignment_id == assignment.id,
+                AssignmentProduct.product_role.in_(["required", "choice"]),
+            )
+        ).scalars().all())
+        regular_stars = sum(ap.stars for ap in ap_rows)
+
+        # --- Bepaal norms en benodigde sterren ---
+        program_code = resolve_program_code(student.program_code)
+        phase = exam_student.phase or student.phase
+        min_regular, min_total = get_star_norms(program_code, phase)
+        suggestion_stars = max(1, min_total - regular_stars)
+
+        # --- Vind exacte match, daarna fallback >= ---
+        exact_matches = list(
+            db.execute(
+                select(Product)
+                .where(
+                    Product.product_kind == "surprise",
+                    Product.speciality_code == program_code,
+                    Product.stars == suggestion_stars,
+                )
+            ).scalars().all()
+        )
+
+        if exact_matches:
+            candidates = exact_matches
+        else:
+            candidates = list(
+                db.execute(
+                    select(Product)
+                    .where(
+                        Product.product_kind == "surprise",
+                        Product.speciality_code == program_code,
+                        Product.stars >= suggestion_stars,
+                    )
+                    .order_by(Product.stars.asc(), Product.name.asc())
+                ).scalars().all()
+            )
+
+        available = [ProductRead.model_validate(p) for p in candidates]
+
+        if not candidates:
+            summary.skipped_no_match += 1
+            summary.results.append(SurpriseAutoAssignItem(
+                exam_student_id=exam_student.id,
+                student_name=student.name,
+                student_number=student.student_number,
+                program_code=student.program_code,
+                phase=exam_student.phase or student.phase,
+                assignment_id=assignment.id,
+                required_stars=suggestion_stars,
+                regular_stars=regular_stars,
+                skipped_reason=f"Geen surprise-product met {suggestion_stars}+ sterren voor {program_code}",
+            ))
+            continue
+
+        chosen = random.choice(candidates)
+
+        surprise_slot.product_id = chosen.id
+        surprise_slot.product_text = None
+        surprise_slot.stars = chosen.stars
+        assignment.required_stars = suggestion_stars
+        assignment.total_stars = regular_stars + chosen.stars
+
+        try:
+            db.commit()
+        except IntegrityError as exc:
+            db.rollback()
+            summary.errors.append(
+                f"exam_student {exam_student.id}: DB fout bij toewijzen surprise: {exc}"
+            )
+            summary.results.append(SurpriseAutoAssignItem(
+                exam_student_id=exam_student.id,
+                student_name=student.name,
+                student_number=student.student_number,
+                program_code=student.program_code,
+                phase=exam_student.phase or student.phase,
+                assignment_id=assignment.id,
+                required_stars=suggestion_stars,
+                regular_stars=regular_stars,
+                skipped_reason="DB-fout",
+            ))
+            continue
+
+        db.refresh(surprise_slot)
+        db.refresh(assignment)
+
+        summary.updated += 1
+        summary.results.append(SurpriseAutoAssignItem(
+            exam_student_id=exam_student.id,
+            student_name=student.name,
+            student_number=student.student_number,
+            program_code=student.program_code,
+            phase=exam_student.phase or student.phase,
+            assignment_id=assignment.id,
+            required_stars=suggestion_stars,
+            regular_stars=regular_stars,
+            surprise_product=ProductRead.model_validate(chosen),
+            available_surprises=available,
+        ))
+
+    return summary

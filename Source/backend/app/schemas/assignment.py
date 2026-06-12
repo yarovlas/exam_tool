@@ -43,7 +43,7 @@ class AssignmentProductCreate(BaseModel):
     product_role: str = Field(min_length=1, max_length=50)
     product_order: int = Field(default=1, gt=0)
     product_text: Optional[str] = None
-    stars: Optional[int] = Field(default=None, ge=0)
+    stars: int = Field(default=0, ge=0)
     result: Optional[str] = Field(default=None, max_length=50)
 
 
@@ -56,7 +56,7 @@ class AssignmentProductRead(BaseModel):
     product_role: str
     product_order: int
     product_text: Optional[str]
-    stars: Optional[int]
+    stars: int
     result: Optional[str]
     created_at: datetime
     updated_at: datetime
