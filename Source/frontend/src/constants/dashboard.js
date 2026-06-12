@@ -22,6 +22,11 @@ export const assessorTypeColors = {
   external: { bg: '#e8dff5', text: '#7c3aed' },
 }
 
+export const studentProgramColors = {
+  BOL: { bg: '#e0f2fe', text: '#0369a1' },
+  BBL: { bg: '#fce7f3', text: '#be185d' },
+}
+
 export const examStatusLabels = {
   planned: 'Gepland',
   scheduled: 'Ingepland',
