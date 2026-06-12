@@ -88,3 +88,32 @@ class OpdrachtMakerCreateRead(BaseModel):
     assignment: AssignmentRead
     assignment_products: list[AssignmentProductRead]
     calculation: OpdrachtMakerCalculateRead
+
+
+class SurpriseAutoAssignItem(BaseModel):
+    exam_student_id: int
+    student_name: str
+    student_number: str
+    program_code: str
+    phase: str
+    assignment_id: int
+    required_stars: int
+    regular_stars: int
+    surprise_product: Optional[ProductRead] = None
+    available_surprises: list[ProductRead] = []
+    skipped_reason: Optional[str] = None
+
+
+class SurpriseAutoAssignRequest(BaseModel):
+    exam_planning_id: int
+    exam_student_ids: Optional[list[int]] = None
+
+
+class SurpriseAutoAssignSummary(BaseModel):
+    total: int
+    updated: int
+    skipped_no_assignment: int
+    skipped_already_assigned: int
+    skipped_no_match: int
+    errors: list[str]
+    results: list[SurpriseAutoAssignItem]

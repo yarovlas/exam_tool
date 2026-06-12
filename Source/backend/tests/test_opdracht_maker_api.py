@@ -17,7 +17,7 @@ Gedekte scenario's:
 import pytest
 from datetime import date, time
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, StaticPool
+from sqlalchemy import create_engine, select, StaticPool
 from sqlalchemy.orm import Session
 
 from app.main import app
@@ -26,6 +26,8 @@ from app.models.exam_planning import Base, ExamPlanning
 from app.models.student import Student
 from app.models.exam_student import ExamStudent
 from app.models.product import Product
+from app.models.assignment import Assignment
+from app.models.assignment_product import AssignmentProduct
 from app.models.auth import AppAuth
 from app.core.auth import hash_password
 
@@ -237,6 +239,59 @@ class TestGetContext:
         data = resp.json()
         assert data["norm"]["min_regular_stars"] == 8
         assert data["norm"]["min_total_stars"] == 11
+
+    def test_alias_pat_resolves_to_zwbb_context(self, client, db):
+        """
+        PAT is een alias voor ZWBB. De context moet ZWBB-regels tonen
+        en ZWBB-producten ophalen, ook al heeft de student program_code='PAT'.
+        """
+        seed_auth(db)
+        exam_student = make_exam_student(db, program_code="PAT", student_phase="Competent")
+        # Voeg een ZWBB-product toe (want PAT → ZWBB)
+        make_product(db, "Grootbrood 3*", "ZWBB", "Gistdeeg Ong. Grootbrood ZWBR en ZWBB", stars=3)
+
+        resp = client.get(
+            f"/api/opdracht-maker/context/{exam_student.id}",
+            headers=auth_headers(client),
+        )
+        assert resp.status_code == 200, resp.text
+        data = resp.json()
+
+        # Moet ZWBB-normen gebruiken (Competent: 9, 12)
+        assert data["norm"]["min_regular_stars"] == 9
+        assert data["norm"]["min_total_stars"] == 12
+        # Moet 2 required groups hebben (ZWBB heeft er 2)
+        assert len(data["required_groups"]) == 2
+        # Choice groups van ZWBB (3 stuks)
+        assert len(data["choice_groups"]) == 3
+
+    def test_alias_pat_can_create_assignment(self, client, db):
+        """
+        PAT-student moet een opdracht kunnen aanmaken met ZWBB-producten.
+        """
+        seed_auth(db)
+        exam_student = make_exam_student(db, program_code="PAT", student_phase="Competent")
+        # ZWBB producten (PAT → ZWBB)
+        p1 = make_product(db, "Gebak 3*", "ZWBB", "Gebak en taarten ZWBA en ZWBB", stars=3)
+        p2 = make_product(db, "Grootbrood 3*", "ZWBB", "Gistdeeg Ong. Grootbrood ZWBR en ZWBB", stars=3)
+        p3 = make_product(db, "Stukwerk beslag 3*", "ZWBB", "Stukwerk Beslag ZWBA/ZWBB", stars=3)
+        surprise = make_product(db, "Verassing 3*", "ZWBB", None, stars=3, product_kind="surprise", document_link="x.xlsx")
+
+        payload = {
+            "exam_student_id": exam_student.id,
+            "products": [
+                {"product_id": p1.id, "product_role": "required", "product_order": 1},
+                {"product_id": p2.id, "product_role": "required", "product_order": 2},
+                {"product_id": p3.id, "product_role": "choice", "product_order": 1},
+                {"product_id": surprise.id, "product_role": "surprise", "product_order": 1},
+            ],
+        }
+        resp = client.post("/api/opdracht-maker/create", json=payload, headers=auth_headers(client))
+        assert resp.status_code == 201, resp.text
+        data = resp.json()
+        assert data["assignment"]["regular_stars"] == 9
+        assert data["assignment"]["total_stars"] == 12
+        assert len(data["assignment_products"]) == 4
 
 
 # ---------------------------------------------------------------------------
@@ -615,3 +670,310 @@ class TestCreate:
         resp = client.post("/api/opdracht-maker/create", json=payload, headers=auth_headers(client))
         assert resp.status_code == 422
         assert "program code" in resp.json()["detail"].lower()
+
+
+# ---------------------------------------------------------------------------
+# Tests: POST /opdracht-maker/batch/auto-assign-surprises
+# ---------------------------------------------------------------------------
+
+
+def _make_assignment_with_placeholder(
+    db: Session,
+    exam_student: ExamStudent,
+    p1, p2, p3,
+    status: str = "draft",
+) -> int:
+    """Create an assignment with required+choice but NO surprise (creates placeholder)."""
+    assignment = Assignment(
+        exam_student_id=exam_student.id,
+        status=status,
+        regular_stars=p1.stars + p2.stars + p3.stars,
+        required_stars=3,
+        total_stars=p1.stars + p2.stars + p3.stars + 3,
+    )
+    db.add(assignment)
+    db.flush()
+
+    for role, order, product in [
+        ("required", 1, p1),
+        ("required", 2, p2),
+        ("choice", 1, p3),
+    ]:
+        ap = AssignmentProduct(
+            assignment_id=assignment.id,
+            product_id=product.id,
+            product_role=role,
+            product_order=order,
+            stars=product.stars,
+        )
+        db.add(ap)
+
+    placeholder = AssignmentProduct(
+        assignment_id=assignment.id,
+        product_id=None,
+        product_role="surprise",
+        product_order=1,
+        product_text="Minimaal 3*",
+        stars=3,
+    )
+    db.add(placeholder)
+    db.commit()
+    return assignment.id
+
+
+class TestAutoAssignSurprises:
+    def test_auto_assign_fills_placeholder(self, client, db):
+        """Placeholder surprise moet worden gevuld met een echt product."""
+        seed_auth(db)
+        exam_student = make_exam_student(db, program_code="ZWBA", student_phase="Competent")
+        p1 = make_product(db, "Gebak 3*", "ZWBA", "Gebak en taarten ZWBA en ZWBB", stars=3)
+        p2 = make_product(db, "Choco 3*", "ZWBA", "Chocolade ZWBA", stars=3)
+        p3 = make_product(db, "Stukwerk 3*", "ZWBA", "Stukwerk Zand ZWBA/ZWBB", stars=3)
+        _make_assignment_with_placeholder(db, exam_student, p1, p2, p3)
+
+        # Maak een surprise-product beschikbaar
+        surprise = make_product(
+            db, "Verassing 3*", "ZWBA", None, stars=3, product_kind="surprise", document_link="x.xlsx"
+        )
+
+        payload = {"exam_planning_id": exam_student.exam_planning_id}
+        resp = client.post(
+            "/api/opdracht-maker/batch/auto-assign-surprises",
+            json=payload,
+            headers=auth_headers(client),
+        )
+        assert resp.status_code == 200, resp.text
+        data = resp.json()
+
+        assert data["total"] == 1
+        assert data["updated"] == 1
+        assert data["skipped_no_assignment"] == 0
+        assert data["skipped_already_assigned"] == 0
+        assert data["skipped_no_match"] == 0
+        assert len(data["errors"]) == 0
+
+        # Controleer dat de surprise is toegewezen
+        item = data["results"][0]
+        assert item["surprise_product"]["id"] == surprise.id
+        assert item["surprise_product"]["stars"] == 3
+        # Controleer regular_stars en available_surprises
+        assert item["regular_stars"] == 9
+        assert item["required_stars"] == 3
+        assert len(item["available_surprises"]) == 1
+        assert item["available_surprises"][0]["id"] == surprise.id
+
+        # Controleer in de database
+        db_surprise = db.execute(
+            select(AssignmentProduct)
+            .join(Assignment)
+            .where(
+                Assignment.exam_student_id == exam_student.id,
+                AssignmentProduct.product_role == "surprise",
+            )
+        ).scalars().first()
+        assert db_surprise.product_id == surprise.id
+        assert db_surprise.product_text is None
+        assert db_surprise.stars == 3
+
+    def test_auto_assign_skips_no_assignment(self, client, db):
+        """Student zonder assignment moet worden overgeslagen."""
+        seed_auth(db)
+        exam_student = make_exam_student(db, program_code="ZWBA", student_phase="Competent")
+
+        payload = {"exam_planning_id": exam_student.exam_planning_id}
+        resp = client.post(
+            "/api/opdracht-maker/batch/auto-assign-surprises",
+            json=payload,
+            headers=auth_headers(client),
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["total"] == 1
+        assert data["updated"] == 0
+        assert data["skipped_no_assignment"] == 1
+
+    def test_auto_assign_skips_already_assigned(self, client, db):
+        """Student die al een echte surprise heeft moet worden overgeslagen."""
+        seed_auth(db)
+        exam_student = make_exam_student(db, program_code="ZWBA", student_phase="Competent")
+        p1 = make_product(db, "Gebak 3*", "ZWBA", "Gebak en taarten ZWBA en ZWBB", stars=3)
+        p2 = make_product(db, "Choco 3*", "ZWBA", "Chocolade ZWBA", stars=3)
+        p3 = make_product(db, "Stukwerk 3*", "ZWBA", "Stukwerk Zand ZWBA/ZWBB", stars=3)
+        ass_id = _make_assignment_with_placeholder(db, exam_student, p1, p2, p3)
+        surprise = make_product(
+            db, "Verassing 3*", "ZWBA", None, stars=3, product_kind="surprise", document_link="x.xlsx"
+        )
+
+        # Wijs de surprise alvast toe (alsof het in een eerdere run is gebeurd)
+        db_surprise = db.execute(
+            select(AssignmentProduct).where(
+                AssignmentProduct.assignment_id == ass_id,
+                AssignmentProduct.product_role == "surprise",
+            )
+        ).scalars().first()
+        db_surprise.product_id = surprise.id
+        db_surprise.product_text = None
+        db_surprise.stars = surprise.stars
+        db.commit()
+
+        payload = {"exam_planning_id": exam_student.exam_planning_id}
+        resp = client.post(
+            "/api/opdracht-maker/batch/auto-assign-surprises",
+            json=payload,
+            headers=auth_headers(client),
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["total"] == 1
+        assert data["updated"] == 0
+        assert data["skipped_already_assigned"] == 1
+
+    def test_auto_assign_skips_no_match(self, client, db):
+        """Geen passende surprise producten → skip."""
+        seed_auth(db)
+        exam_student = make_exam_student(db, program_code="ZWBA", student_phase="Competent")
+        p1 = make_product(db, "Gebak 3*", "ZWBA", "Gebak en taarten ZWBA en ZWBB", stars=3)
+        p2 = make_product(db, "Choco 3*", "ZWBA", "Chocolade ZWBA", stars=3)
+        p3 = make_product(db, "Stukwerk 3*", "ZWBA", "Stukwerk Zand ZWBA/ZWBB", stars=3)
+        _make_assignment_with_placeholder(db, exam_student, p1, p2, p3)
+
+        # Geen surprise-producten voor ZWBA
+        payload = {"exam_planning_id": exam_student.exam_planning_id}
+        resp = client.post(
+            "/api/opdracht-maker/batch/auto-assign-surprises",
+            json=payload,
+            headers=auth_headers(client),
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["total"] == 1
+        assert data["updated"] == 0
+        assert data["skipped_no_match"] == 1
+
+    def test_auto_assign_filters_by_exam_student_ids(self, client, db):
+        """Alleen gespecificeerde studenten verwerken."""
+        seed_auth(db)
+        planning = ExamPlanning(
+            exam_date=date(2026, 6, 15),
+            exam_type="practical",
+            room="A01",
+            exam_time=time(9, 0, 0),
+            status="planned",
+        )
+        db.add(planning)
+        db.flush()
+
+        def make_es(program_code):
+            student = Student(
+                student_number=f"S{program_code}_{id(planning)}",
+                name=f"Student {program_code}",
+                program_code=program_code,
+                phase="Competent",
+                email="s@test.nl",
+            )
+            db.add(student)
+            db.flush()
+            es = ExamStudent(exam_planning_id=planning.id, student_id=student.id, phase=None)
+            db.add(es)
+            db.flush()
+            return es
+
+        es1 = make_es("ZWBA")
+        es2 = make_es("ZWBB")
+
+        # Alleen de eerste verwerken
+        payload = {
+            "exam_planning_id": planning.id,
+            "exam_student_ids": [es1.id],
+        }
+        resp = client.post(
+            "/api/opdracht-maker/batch/auto-assign-surprises",
+            json=payload,
+            headers=auth_headers(client),
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["total"] == 1  # maar 1 van de 2
+
+    def test_auto_assign_batch_multiple_students(self, client, db):
+        """Meerdere studenten tegelijk verwerken (zelfde planning)."""
+        seed_auth(db)
+        planning = ExamPlanning(
+            exam_date=date(2026, 6, 15),
+            exam_type="practical",
+            room="A01",
+            exam_time=time(9, 0, 0),
+            status="planned",
+        )
+        db.add(planning)
+        db.flush()
+
+        def make_es(program_code, phase):
+            student = Student(
+                student_number=f"S{program_code}_{id(planning)}_{id(db)}",
+                name=f"Student {program_code}",
+                program_code=program_code,
+                phase=phase,
+                email="s@test.nl",
+            )
+            db.add(student)
+            db.flush()
+            es = ExamStudent(exam_planning_id=planning.id, student_id=student.id, phase=None)
+            db.add(es)
+            db.flush()
+            return es, student
+
+        es1, _ = make_es("ZWBA", "Competent")
+        es2, _ = make_es("UBB", "Competent")
+
+        p1 = make_product(db, "Gebak 3*", "ZWBA", "Gebak en taarten ZWBA en ZWBB", stars=3)
+        p2 = make_product(db, "Choco 3*", "ZWBA", "Chocolade ZWBA", stars=3)
+        p3 = make_product(db, "Stukwerk 3*", "ZWBA", "Stukwerk Zand ZWBA/ZWBB", stars=3)
+        _make_assignment_with_placeholder(db, es1, p1, p2, p3)
+
+        p4 = make_product(db, "Gevuld 3*", "UBB", "Gevuld kleinbrood - UBR & UBB", stars=3)
+        p5 = make_product(db, "Taart 2*", "UBB", "Gebak en taarten UBB & UBA", stars=2)
+        assignment2 = Assignment(
+            exam_student_id=es2.id,
+            status="draft",
+            regular_stars=p4.stars + p5.stars,
+            required_stars=3,
+            total_stars=8,
+        )
+        db.add(assignment2)
+        db.flush()
+        for role, order, product in [("required", 1, p4), ("required", 2, p5)]:
+            db.add(AssignmentProduct(
+                assignment_id=assignment2.id,
+                product_id=product.id,
+                product_role=role,
+                product_order=order,
+                stars=product.stars,
+            ))
+        db.add(AssignmentProduct(
+            assignment_id=assignment2.id,
+            product_id=None,
+            product_role="surprise",
+            product_order=1,
+            product_text="Minimaal 3*",
+            stars=3,
+        ))
+        db.commit()
+
+        make_product(db, "Verassing ZW 3*", "ZWBA", None, stars=3, product_kind="surprise", document_link="x.xlsx")
+        make_product(db, "Verassing UB 3*", "UBB", None, stars=3, product_kind="surprise", document_link="x.xlsx")
+
+        payload = {"exam_planning_id": planning.id}
+        resp = client.post(
+            "/api/opdracht-maker/batch/auto-assign-surprises",
+            json=payload,
+            headers=auth_headers(client),
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["total"] == 2
+        assert data["updated"] == 2
+        assert data["skipped_no_assignment"] == 0
+        assert data["skipped_already_assigned"] == 0
+        assert data["skipped_no_match"] == 0
+        assert len(data["errors"]) == 0
