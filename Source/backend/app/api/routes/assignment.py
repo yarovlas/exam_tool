@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.models.assignment import Assignment
 from app.models.assignment_product import AssignmentProduct
+from app.models.exam_planning import ExamPlanning
 from app.models.exam_student import ExamStudent
 from app.models.product import Product
 from app.schemas.assignment import (
@@ -47,6 +48,11 @@ def create_assignment(payload: AssignmentCreate, db: Session = Depends(get_db)) 
     )
 
     db.add(assignment)
+    db.flush()
+
+    exam_planning = db.get(ExamPlanning, exam_student.exam_planning_id)
+    if exam_planning and exam_planning.status in ('planned', 'scheduled'):
+        exam_planning.status = 'in_progress'
 
     try:
         db.commit()

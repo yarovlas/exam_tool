@@ -7,6 +7,7 @@ import { listAssessors } from '../services/assessorsApi'
 import { listStudents } from '../services/studentsApi'
 import { createExamStudent, updateExamStudent, deleteExamStudent } from '../services/examStudentsApi'
 import { createExamAssessor, deleteExamAssessor } from '../services/examAssessorsApi'
+import { request } from '../services/apiClient'
 
 const route = useRoute()
 const router = useRouter()
@@ -101,8 +102,9 @@ watch(selectedExam, (exam) => {
     editForm.room = exam.room || ''
     editForm.exam_type = exam.exam_type || 'practical'
     editForm.status = exam.status || 'planned'
-
   }
+
+  loadAssignmentsMap()
 })
 
 const loadAssessors = async () => {
@@ -336,6 +338,29 @@ const unlinkStudent = async (examStudentId) => {
 }
 
 const assessorActionLoading = ref(false)
+const assignmentsMap = ref({})
+
+const loadAssignmentsMap = async () => {
+  const students = selectedExam.value?.exam_students
+  if (!students?.length) { assignmentsMap.value = {}; return }
+  const map = {}
+  try {
+    const results = await Promise.allSettled(
+      students.map((es) =>
+        request('/assignments', { query: { exam_student_id: es.id, limit: 1 } }),
+      ),
+    )
+    students.forEach((es, i) => {
+      const r = results[i]
+      if (r.status === 'fulfilled' && r.value && r.value.length > 0) {
+        map[es.id] = r.value[0]
+      }
+    })
+  } catch (e) { /* ignore */ }
+  assignmentsMap.value = map
+}
+
+const hasOpdracht = (esId) => !!assignmentsMap.value[esId]
 
 const getSlotAssessorId = (slotOrder) => {
   if (!selectedExam.value) return null
@@ -444,6 +469,7 @@ const unlinkAssessor = async (examAssessorId) => {
 
               <div class="flex items-center gap-sm">
                 <button v-if="!isEditing" class="cursor-pointer whitespace-nowrap rounded-md border border-border bg-surface px-[0.8rem] py-[0.55rem] font-semibold text-primary transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-65" type="button" @click="startEdit">Bewerken</button>
+                <RouterLink v-if="!isEditing && selectedExam" :to="{ name: 'opdrachten', query: { exam_id: selectedExam.id } }" class="inline-flex no-underline cursor-pointer whitespace-nowrap rounded-md border border-border bg-surface px-[0.8rem] py-[0.55rem] font-semibold text-primary transition-colors hover:bg-gray-100">Reden</RouterLink>
                 <button v-if="!isEditing" class="cursor-pointer whitespace-nowrap rounded-md border border-border bg-surface px-[0.8rem] py-[0.55rem] font-semibold text-primary transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-65" type="button" @click="confirmAndDelete" :disabled="deleteLoading">{{ deleteLoading ? 'Verwijderen...' : 'Verwijderen' }}</button>
 
                 <button v-if="isEditing" class="cursor-pointer whitespace-nowrap rounded-md border border-border bg-surface px-[0.8rem] py-[0.55rem] font-semibold text-primary transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-65" type="button" @click="cancelEdit">Annuleren</button>
@@ -562,8 +588,9 @@ const unlinkAssessor = async (examAssessorId) => {
                     <td class="p-xs p-sm">
                       <div class="flex items-center gap-[0.4rem]">
                         <span class="text-sm text-gray-700">—</span>
-                        <button type="button" class="cursor-pointer rounded-[0.4rem] border border-border bg-surface px-[0.5rem] py-[0.25rem] text-sm text-gray-700">Bekijken</button>
-                        <button type="button" class="cursor-pointer whitespace-nowrap rounded-[0.4rem] border border-border bg-surface px-[0.5rem] py-[0.25rem] text-sm text-gray-700">Toewijzen</button>
+                        <RouterLink :to="{ name: 'opdrachten', query: { exam_student_id: es.id, view: 'detail' } }" class="inline-flex items-center no-underline cursor-pointer rounded-[0.4rem] border border-border bg-surface px-[0.5rem] py-[0.25rem] text-sm text-gray-700 hover:bg-gray-100">Bekijken</RouterLink>
+                        <RouterLink v-if="hasOpdracht(es.id)" :to="{ name: 'opdrachten', query: { exam_student_id: es.id, view: 'wizard', replace: '1' } }" class="inline-flex items-center no-underline cursor-pointer whitespace-nowrap rounded-[0.4rem] border border-primary bg-primary px-[0.5rem] py-[0.25rem] text-sm text-surface hover:bg-primary-hover">Bewerken</RouterLink>
+                        <RouterLink v-else :to="{ name: 'opdrachten', query: { exam_student_id: es.id, view: 'wizard' } }" class="inline-flex items-center no-underline cursor-pointer whitespace-nowrap rounded-[0.4rem] border border-border bg-surface px-[0.5rem] py-[0.25rem] text-sm text-gray-700 hover:bg-gray-100">Toewijzen</RouterLink>
                       </div>
                     </td>
                     <td class="p-xs p-sm">
