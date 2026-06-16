@@ -5,7 +5,9 @@ from pathlib import Path
 
 def main():
     db_url = os.environ.get("DATABASE_URL", "")
-    if db_url.startswith("postgres://"):
+    if "postgresql://" in db_url and "+psycopg" not in db_url:
+        os.environ["DATABASE_URL"] = db_url.replace("postgresql://", "postgresql+psycopg://", 1)
+    elif db_url.startswith("postgres://"):
         os.environ["DATABASE_URL"] = db_url.replace("postgres://", "postgresql+psycopg://", 1)
 
     backend_dir = Path(__file__).resolve().parent

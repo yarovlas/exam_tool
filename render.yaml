@@ -6,8 +6,8 @@ databases:
 
 services:
   - type: web
+    runtime: python
     name: exam-tool-backend
-    env: python
     region: frankfurt
     plan: free
     rootDir: Source/backend
@@ -33,12 +33,12 @@ services:
       - key: PYTHONUNBUFFERED
         value: "1"
 
-  - type: static site
+  - type: web
+    runtime: static
     name: exam-tool-frontend
-    region: frankfurt
     rootDir: Source/frontend
     buildCommand: npm install && npm run build
-    publishPath: dist
+    staticPublishPath: dist
     envVars:
       - key: VITE_API_BASE_URL
         sync: false
