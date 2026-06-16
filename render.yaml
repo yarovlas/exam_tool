@@ -33,7 +33,7 @@ services:
       - key: PYTHONUNBUFFERED
         value: "1"
 
-  - type: static
+  - type: static site
     name: exam-tool-frontend
     region: frankfurt
     rootDir: Source/frontend
