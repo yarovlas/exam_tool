@@ -1,0 +1,45 @@
+databases:
+  - name: exam-tool-db
+    databaseName: exam_tool
+    plan: free
+    region: frankfurt
+
+services:
+  - type: web
+    name: exam-tool-backend
+    env: python
+    region: frankfurt
+    plan: free
+    rootDir: Source/backend
+    buildCommand: pip install -r requirements.txt
+    preDeployCommand: python render_start.py --migrate-only
+    startCommand: python render_start.py
+    healthCheckPath: /
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: exam-tool-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: AUTH_EMAIL
+        value: admin@talland.nl
+      - key: AUTH_PASSWORD
+        value: admin123
+      - key: CORS_ALLOWED_ORIGINS
+        value: "*"
+      - key: APP_RELOAD
+        value: "false"
+      - key: PYTHONUNBUFFERED
+        value: "1"
+
+  - type: static
+    name: exam-tool-frontend
+    region: frankfurt
+    rootDir: Source/frontend
+    buildCommand: npm install && npm run build
+    publishPath: dist
+    envVars:
+      - key: VITE_API_BASE_URL
+        sync: false
+        value: https://exam-tool-backend.onrender.com/api
