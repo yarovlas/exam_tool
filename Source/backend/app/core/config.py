@@ -1,0 +1,55 @@
+import os
+from dataclasses import dataclass
+from pathlib import Path
+from urllib.parse import quote_plus
+
+from dotenv import load_dotenv
+
+
+BASE_DIR = Path(__file__).resolve().parents[2]
+load_dotenv(BASE_DIR / ".env")
+
+
+@dataclass(frozen=True)
+class Settings:
+    app_name: str = os.getenv("APP_NAME", "Exam Tool API")
+    app_version: str = os.getenv("APP_VERSION", "0.1.0")
+    api_prefix: str = os.getenv("API_PREFIX", "/api")
+    cors_allowed_origins_raw: str = os.getenv("CORS_ALLOWED_ORIGINS", "*")
+
+    pg_host: str = os.getenv("PGHOST") or "localhost"
+    pg_port: int = int(os.getenv("PGPORT") or "5432")
+    pg_user: str = os.getenv("PGUSER") or "exam_admin"
+    pg_password: str = os.getenv("PGPASSWORD") or "exam_admin"
+    pg_database: str = os.getenv("PGDATABASE") or "exam_tool"
+
+    database_url: str = os.getenv("DATABASE_URL", "")
+
+    # Auth settings — used as seed defaults when app_auth table is empty
+    auth_email: str = os.getenv("AUTH_EMAIL", "admin@talland.nl")
+    auth_password: str = os.getenv("AUTH_PASSWORD", "")
+    jwt_secret: str = os.getenv("JWT_SECRET", "")
+    jwt_algorithm: str = os.getenv("JWT_ALGORITHM", "HS256")
+    jwt_expiry_minutes: int = int(os.getenv("JWT_EXPIRY_MINUTES", "480"))
+
+    @property
+    def sqlalchemy_database_uri(self) -> str:
+        if self.database_url:
+            return self.database_url
+
+        user = quote_plus(self.pg_user)
+        password = quote_plus(self.pg_password)
+        host = self.pg_host
+        database = quote_plus(self.pg_database)
+        return f"postgresql+psycopg://{user}:{password}@{host}:{self.pg_port}/{database}"
+
+    @property
+    def cors_allowed_origins(self) -> list[str]:
+        if self.cors_allowed_origins_raw.strip() == "*":
+            return ["*"]
+
+        origins = [item.strip() for item in self.cors_allowed_origins_raw.split(",")]
+        return [origin for origin in origins if origin] or ["*"]
+
+
+settings = Settings()
